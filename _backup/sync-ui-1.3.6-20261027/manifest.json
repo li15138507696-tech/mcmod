@@ -1,0 +1,57 @@
+{
+  "target": "D:\\daima\\mcmod\\蛊真人附属",
+  "backup": "D:\\daima\\mcmod\\蛊真人附属\\_backup\\sync-ui-1.3.6-20261027",
+  "old_jar_sha256": "54f9c3664c464d3af6a09d6d82aa51ff2e160a145506b864c051bc93d435cbdb",
+  "files": [
+    {
+      "path": "src/main/java/net/guzhenren/tianfu/TianfuNet.java",
+      "before": "75e9e58527edb52576796477e22b1b94ebb13a8f4b664a5b89e511788f1695c6",
+      "after": "9dd5d1e081b6b52af9a33030370517989c3f3357c8d389ac9c582b9755e818e9"
+    },
+    {
+      "path": "src/main/java/net/guzhenren/tianfu/TianfuOpening.java",
+      "before": "f861ceb0e9157f845218f1c91832143628e3a7e471a51e04b216225ad336e2e0",
+      "after": "75b773d269b62b09053981a60fb8fda6ff0232072ce64f68151929abd53fee5f"
+    },
+    {
+      "path": "src/main/java/net/guzhenren/tianfu/TianfuCommands.java",
+      "before": "7d42afab9024e67b64a2e72b6b87ce023d344f790b1a62103997f1287d28d757",
+      "after": "47159d43b5a53f4dc6deb07c32e2a5ede4fe77bd538c5eece8117848d61bf901"
+    },
+    {
+      "path": "src/main/java/net/guzhenren/tianfu/net/TianfuRequestPayload.java",
+      "before": "b1828eb3ba348e868436b722c86eee6ce1071aed145856a4fc958ba6445e3a82",
+      "after": "4ee1c17f35394ab3ffc9d5b0abee895a1d9017669983c6523b8ec3e5ac8d188b"
+    },
+    {
+      "path": "src/main/resources/META-INF/neoforge.mods.toml",
+      "before": "40ae220e74becfbdb1fd88fbab41dbf65e68d01cc4e925d61807a5647f54ce9b",
+      "after": "163461ffc6bffb2af9dace9786c214fd41a40b9c6377c1bd2a963735ff899c14"
+    },
+    {
+      "path": "version.properties",
+      "before": "803aa07465ef1dc81babd7531e671afede38b6eaaf7bbfd1fb0704b1621e5d1d",
+      "after": "af42a5208578171397af325b43c2ee1f5abbf5a2963c205ccb1b49350a81787a"
+    },
+    {
+      "path": "docs/宣传文档.md",
+      "before": "97667ae5ddbbfff73797f552dd23cd90a7aef6cfbf850ffe6ee9f22b40a1ac47",
+      "after": "d097df85a5656a749739a126e9b983008939ba32199d422eec15e5f5975fb41e"
+    },
+    {
+      "path": "docs/天赋系统介绍文档.md",
+      "before": "628871d78a6e8caea753aa291a9e42da94b4681fd94fd538d2ad352a4ed619a8",
+      "after": "b2b6e55b293fef44caca2788f54d5a4c331c74a943c50914749cd01cf80f8432"
+    },
+    {
+      "path": "docs/2026-10-27-bugfix.md",
+      "before": null,
+      "after": "89fb8b4e1edb7db8259155517302769ee0d7ae8ceac2c5ccd73689ac7f50e018"
+    },
+    {
+      "path": "build/libs/tianfu-1.3.6.jar",
+      "before": null,
+      "after": "4f0ede6948fe560102785cfdf075928651456f3a3069be52e7c639d06f783ec0"
+    }
+  ]
+}

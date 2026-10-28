@@ -1,0 +1,45 @@
+# ===== 构建产物 =====
+build/
+out/
+*.jar
+!gradle/wrapper/gradle-wrapper.jar
+
+# ===== 逆向/审计工作区（数百 MB，不入库）=====
+_reverse/
+_crash/
+_crash2/
+_crash3/
+_crash4/
+_crash5/
+_crash_inbox/
+_tmp_verify/
+_probe_out/
+
+# ===== 第三方依赖（运行期由整合包提供）=====
+libs/
+!libs/README.txt
+
+# ===== 第三方资料（版权原因不入库）=====
+_ref/knowledge-base.txt
+_ref/player-variables-fields.txt
+_ref/talent-inventory.txt
+
+# ===== 本地环境 =====
+.gradle/
+.dsh/
+.dsh-plugins/
+.idea/
+.vscode/
+*.iml
+run/
+logs/
+crash-reports/
+
+# ===== JVM 崩溃日志 =====
+hs_err_pid*.log
+replay_pid*.log
+
+# ===== 系统垃圾 =====
+Thumbs.db
+desktop.ini
+.DS_Store

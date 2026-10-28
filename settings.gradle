@@ -1,0 +1,17 @@
+pluginManagement {
+    // 若本机可访问 maven.neoforged.net，可改回 MDG；当前环境该域名被 DNS 污染 + CDN IP 不可达，
+    // 因此构建改为「纯 java 插件 + 本机已安装的 NeoForge 产物（file 依赖）」，全程离线。
+    repositories {
+        maven { name = 'GradlePluginPortal'; url = 'https://plugins.gradle.org/m2' }
+        mavenCentral()
+    }
+}
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.PREFER_SETTINGS)
+    repositories {
+        mavenCentral()
+    }
+}
+
+rootProject.name = 'tianfu'

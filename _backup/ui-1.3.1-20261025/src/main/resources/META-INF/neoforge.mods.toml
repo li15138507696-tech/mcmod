@@ -1,0 +1,38 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "All Rights Reserved"
+
+[[mods]]
+modId = "tianfu"
+version = "1.3.0"
+displayName = "蛊真人天命"
+description = '''
+蛊真人附属「天命」：以希望蛊开窍后开启的开局天赋系统 —— 凡体体质、十绝体、杀神、甲乙丙丁机缘、天赋词条，
+用开局难度发放的自由点数自由购买，按 K 键打开界面。
+本体原有的随机空窍资质已被取消（开窍后空窍保持无资质，基础真元回复靠购买机缘恢复）。
+'''
+authors = "tianfu"
+
+[[dependencies.tianfu]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.232,)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.tianfu]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1,1.22)"
+ordering = "NONE"
+side = "BOTH"
+
+[[dependencies.tianfu]]
+modId = "guzhenren"
+type = "required"
+versionRange = "[0.1,)"
+ordering = "AFTER"
+side = "BOTH"
+
+[[mixins]]
+config = "tianfu.mixins.json"
