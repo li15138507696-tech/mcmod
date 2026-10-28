@@ -1,0 +1,107 @@
+# 现有天赋词条清单（自动抽取自 TianfuTalents.java BASE 表）
+
+格式：id | 名称 | 品质 | 成本 | 描述 | 效果原语
+
+jiandao_qinhe | 剑道亲和 | 黄 | 1 | 剑道道痕 +200 | dao
+leidao_qinhe | 雷道亲和 | 黄 | 1 | 雷道道痕 +200 | dao
+yandao_qinhe | 炎道亲和 | 黄 | 1 | 炎道道痕 +200 | dao
+bingxuedao_qinhe | 冰雪道亲和 | 黄 | 1 | 冰雪道道痕 +200 | dao
+fengdao_qinhe | 风道亲和 | 黄 | 1 | 风道道痕 +200 | dao
+yingdao_qinhe | 影道亲和 | 黄 | 1 | 影道道痕 +200 | dao
+yuedao_qinhe | 月道亲和 | 黄 | 1 | 月道道痕 +200 | dao
+shuidao_qinhe | 水道亲和 | 黄 | 1 | 水道道痕 +200 | dao
+tudao_qinhe | 土道亲和 | 黄 | 1 | 土道道痕 +200 | dao
+mudao_qinhe | 木道亲和 | 黄 | 1 | 木道道痕 +200 | dao
+jindao_qinhe | 金道亲和 | 黄 | 1 | 金道道痕 +200 | dao
+gudao_qinhe | 骨道亲和 | 黄 | 1 | 骨道道痕 +200 | dao
+lidao_qinhe | 力道亲和 | 黄 | 1 | 力道道痕 +200 | dao
+hundao_qinhe | 魂道亲和 | 黄 | 1 | 魂道道痕 +200 | dao
+xuedao_qinhe | 血道亲和 | 黄 | 1 | 血道道痕 +200 | dao
+xudao_qinhe | 虚道亲和 | 黄 | 1 | 虚道道痕 +200 | dao
+zhidao_qinhe | 智道亲和 | 黄 | 1 | 智道道痕 +200 | dao
+zhoudao_qinhe | 宙道亲和 | 黄 | 1 | 宙道道痕 +200 | dao
+mengdao_qinhe | 梦道亲和 | 黄 | 1 | 梦道道痕 +200 | dao
+dudao_qinhe | 毒道亲和 | 黄 | 1 | 毒道道痕 +200 | dao
+tiepi_rougu | 铁皮肉骨 | 黄 | 1 | 非护甲减伤 +4% | f
+bufen_zhiwu | 不焚之物 | 黄 | 1 | 常驻防火 | mob
+shenfa_qingjie | 身法轻捷 | 黄 | 1 | 移动速度 +5% | f
+zhaoqi_yinlu | 朝气饮露 | 黄 | 1 | 每 5 秒回复 1% 生命 | f
+niantou_zisheng | 念头自生 | 黄 | 1 | 念头回复 +20% | f
+bingdao_qinhe | 兵道亲和 | 玄 | 2 | 兵道道痕 +500 | dao
+daodao_qinhe | 刀道亲和 | 玄 | 2 | 刀道道痕 +500 | dao
+guangdao_qinhe | 光道亲和 | 玄 | 2 | 光道道痕 +500 | dao
+xingdao_qinhe | 星道亲和 | 玄 | 2 | 星道道痕 +500 | dao
+dandao_qinhe | 丹道亲和 | 玄 | 2 | 丹道道痕 +500 | dao
+liandao_qinhe | 炼道亲和 | 玄 | 2 | 炼道道痕 +500 | dao
+yindao_qinhe | 音道亲和 | 玄 | 2 | 音道道痕 +500 | dao
+huandao_qinhe | 幻道亲和 | 玄 | 2 | 幻道道痕 +500 | dao
+bianhuadao_qinhe | 变化道亲和 | 玄 | 2 | 变化道道痕 +500 | dao
+zhendao_qinhe | 阵道亲和 | 玄 | 2 | 阵道道痕 +500 | dao
+wuying_bi | 无影壁 | 玄 | 2 | 受击 6% 概率反弹 12% 伤害 | reflect
+ruwei_dingshen | 入微定神 | 玄 | 2 | 非护甲减伤 +8% | f
+shanbu_suifeng | 闪步随风 | 玄 | 2 | 闪避率 +6% | f
+xueqi_rulin | 血气如林 | 玄 | 2 | 生命上限 +20% | f
+lijin_ruquan | 力进如泉 | 玄 | 2 | 攻击伤害 +8% | f
+quanru_jifeng | 拳如疾风 | 玄 | 2 | 攻击速度 +10% | f
+songyue_jianli | 耸岳坚立 | 玄 | 2 | 击退抗性 +0.4 | f
+jingli_shengheng | 精力生生 | 玄 | 2 | 精力上限 +30% | fld
+chuntian_yishou | 春田益寿 | 玄 | 2 | 寿元 +80 | fldAdd
+qiyun_weiying | 气运微荫 | 玄 | 2 | 气运上限 +12 | fldAdd
+qiyun_yingmen | 气运盈门 | 玄 | 2 | 气运上限 +18 | fldAdd
+hunpo_lianxi | 魂魄炼息 | 玄 | 2 | 魂魄上限 +15% | fld
+hunzai_kuanhou | 魂载宽厚 | 玄 | 2 | 魂魄承载极限 +15% | fld
+niantou_kuozhan | 念头扩展 | 玄 | 2 | 念头容量 +15% | fld
+zhenyuan_huiliu | 真元回流 | 玄 | 2 | 真元回复 +35% | f
+tupo_tongtian | 突破通天 | 地 | 3 | 突破瓶颈 −30% | f
+dazuo_wangwo | 打坐忘我 | 地 | 3 | 打坐时修炼进度 +40% | f
+liangu_rushen | 炼蛊如神 | 地 | 3 | 炼蛊进度 +40% | f
+gudao_dup | 蛊道独步 | 地 | 3 | 蛊冷却缩短（每 tick −0.25） | f
+shazhao_rufeng | 杀招如风 | 地 | 3 | 杀招冷却缩短（每 tick −0.25） | f
+zhenyuan_ruquan | 真元如泉 | 地 | 3 | 真元回复 +80% | f
+niantou_ruyuan | 念头如渊 | 地 | 3 | 念头回复 +60% | f
+xieshi_ziyu | 血食自愈 | 地 | 3 | 每 5 秒回复 3% 生命 | f
+shenfa_ruyan | 身法如燕 | 地 | 3 | 闪避率 +12% | f
+baoji_rulie | 暴击如裂 | 地 | 3 | 暴击率 +15% | f
+baoshang_rufeng | 暴伤如锋 | 地 | 3 | 暴击伤害 +80% | f
+xixue_rumo | 吸血入魔 | 地 | 3 | 攻击吸血 +6% | f
+fanshang_ruyu | 反伤如玉 | 地 | 3 | 受击 10% 概率反弹 20% 伤害 | reflect
+jianjia_ruyan | 坚甲如岩 | 地 | 3 | 非护甲减伤 +15% | f
+quansheng_ruhong | 全盛如洪 | 地 | 3 | 满血时出伤 +18% | f
+canshen_rulang | 残身如狼 | 地 | 3 | 残血（<30%）时出伤 +25% | f
+wanjun_lili | 万钧之力 | 地 | 3 | 常驻力量 II | mob
+shengji_rumu | 生息如沐 | 地 | 3 | 常驻生命恢复 II | mob
+jiandao_dacheng | 剑道大成 | 地 | 3 | 剑道道痕 +800 | dao
+leidao_dacheng | 雷道大成 | 地 | 3 | 雷道道痕 +800 | dao
+lidao_dacheng | 力道大成 | 地 | 3 | 力道道痕 +800 | dao
+wuxing_daocang | 五行道藏 | 天 | 5 | 全流派道痕各 +300 | f
+qiqiao_linglong | 七窍玲珑 | 天 | 5 | 念头容量 +50%、念头之道 +50% | fld,fld
+hunpo_rugui | 魂魄如鬼 | 天 | 5 | 魂魄上限 +50%、承载极限 +50% | fld,fld
+jingli_ruhai | 精力如海 | 天 | 5 | 精力上限 +80% | fld
+shouyuan_ruhe | 寿元如鹤 | 天 | 5 | 寿元 +200 | fldAdd
+qiyun_ruhong | 气运如虹 | 天 | 5 | 气运上限 +60 | fldAdd
+zhenyuan_bujie | 真元不竭 | 天 | 5 | 真元回复 +150% | f
+niantou_bujie | 念头不竭 | 天 | 5 | 念头回复 +120% | f
+huixue_rusheng | 回血如生 | 天 | 5 | 每 5 秒回复 5% 生命 | f
+baoji_rushen | 暴击如神 | 天 | 5 | 暴击率 +25%、暴击伤害 +120% | f,f
+xixue_rushi | 吸血如饕 | 天 | 5 | 攻击吸血 +10% | f
+fanshang_rushan | 反伤如山 | 天 | 5 | 受击 20% 概率反弹 35% 伤害 | reflect
+jianjia_rushen | 坚甲如神 | 天 | 5 | 非护甲减伤 +25% | f
+xiulian_rushen | 修炼如神 | 天 | 5 | 修炼速度 +60%、突破瓶颈 −40% | f,f
+liangu_bujie | 炼蛊不竭 | 天 | 5 | 炼蛊进度 +60%、蛊冷却缩短（每 tick −0.3） | f,f
+jixing_ruying | 疾行如影 | 天 | 5 | 常驻迅捷 III | mob
+bingxue_daoti | 冰雪道体 | 天 | 5 | 常驻「冰雪道增幅」（兼修附属） | mob
+hundao_ronghe | 魂道融彻 | 天 | 5 | 常驻「魂道增幅」（魂道附属） | mob
+qiyun_yizhi | 一掷乾坤 | 天 | 5 | 常驻「一掷乾坤」、气运上限 +40 | mob,fldAdd
+malice_moonwalk | 踏虚而行 | 黄 | 1 | 摔落伤害 −60%（恶意·月步） | f
+malice_slowness | 流沙缚足 | 黄 | 1 | 攻击命中使目标缓慢 II，5 秒（恶意·流沙） | onHit
+malice_poison | 毒蚀之能 | 玄 | 2 | 攻击命中使目标中毒 II，5 秒（恶意·剧毒） | onHit
+malice_freezing | 寒流侵体 | 玄 | 2 | 攻击命中使目标缓慢 II，5 秒（恶意·寒流） | onHit
+malice_weakness | 卸力之能 | 玄 | 2 | 攻击命中使目标虚弱 II，5 秒（恶意·虚弱） | onHit
+malice_blindness | 夺明之术 | 玄 | 2 | 攻击命中使目标致盲 3 秒（恶意·致盲） | onHit
+malice_reflect | 镜影反照 | 地 | 3 | 受击时 15% 概率把 30% 伤害以魔法形式反弹（恶意·反射） | reflect
+malice_counter | 反戈一击 | 地 | 3 | 被击中后 3 秒内攻击伤害 +15%（恶意·反击） | counter
+malice_wither | 枯荣之力 | 地 | 3 | 攻击命中使目标凋零 II，5 秒（恶意·凋零） | onHit
+malice_dementor | 摄魂夺魄 | 天 | 5 | 受到的「吃护甲」类伤害（近战/弹射物/爆炸）−15%（恶意·摄魂） | f
+malice_dispell | 破法之瞳 | 天 | 5 | 受到的「穿护甲」类伤害（魔法/药水/虚空）−15%（恶意·破魔） | f
+malice_adaptive | 随境应变 | 天 | 5 | 每次受同类伤害再减伤 2%，同类最多叠 10 层（恶意·适应） | adaptive
+malice_killer_aura | 杀意凛然 | 天 | 5 | 每 3 秒对 4 格内敌对生物造成 5% 攻击力的魔法伤害（恶意·杀戮光环） | aura
