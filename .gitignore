@@ -14,6 +14,10 @@ _crash5/
 _crash_inbox/
 _tmp_verify/
 _probe_out/
+_backup/
+.trae/
+_audit_mixin_probe.py
+解析报告_本体与天命附属.md
 
 # ===== 第三方依赖（运行期由整合包提供）=====
 libs/
