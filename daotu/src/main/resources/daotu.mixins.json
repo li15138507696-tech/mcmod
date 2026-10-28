@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "net.guzhenren.daotu.mixin",
   "compatibilityLevel": "JAVA_21",
+  "priority": 1100,
   "mixins": [
     "UikongqiaoquedingProcedureMixin",
     "JingJieBaoCunProcedureMixin"
