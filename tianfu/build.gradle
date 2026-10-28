@@ -111,9 +111,9 @@ dependencies {
     compileOnly files(coreJars)
     compileOnly files(runtimeClasspath)
     // 蛊真人本体：仅编译期依赖，运行期由整合包提供（neoforge.mods.toml 已声明 required）。
-    compileOnly files('_reverse/nested/guzhenren-0.1-neoforge-1.21.1.jar')
+    compileOnly files('../_reverse/nested/guzhenren-0.1-neoforge-1.21.1.jar')
     // Veil：可选依赖，仅编译期；运行期用 ModList 软检测。
-    compileOnly files('libs/veil-neoforge-1.21.1-4.4.1.jar')
+    compileOnly files('../libs/veil-neoforge-1.21.1-4.4.1.jar')
 }
 
 tasks.withType(JavaCompile).configureEach {

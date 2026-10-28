@@ -1,5 +1,6 @@
 package net.guzhenren.tianfu.client;
 
+import com.mojang.blaze3d.platform.InputConstants;
 import org.lwjgl.glfw.GLFW;
 
 import net.guzhenren.tianfu.TianfuMod;
@@ -25,7 +26,7 @@ import net.neoforged.neoforge.common.NeoForge;
 public final class TianfuKeyMappings {
     /** 打开天赋查看界面。 */
     public static final KeyMapping VIEW =
-            new KeyMapping("key.tianfu.view", GLFW.GLFW_KEY_K, "key.categories.misc");
+            new KeyMapping("key.tianfu.view", InputConstants.Type.KEYSYM, GLFW.GLFW_KEY_K, "key.categories.misc");
 
     private TianfuKeyMappings() {
     }

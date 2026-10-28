@@ -3,6 +3,7 @@
   "minVersion": "0.8",
   "package": "net.guzhenren.tianfu.mixin",
   "compatibilityLevel": "JAVA_21",
+  "priority": 900,
   "mixins": [
     "JingJieBaoCunProcedureMixin",
     "UikongqiaoquedingProcedureMixin",
