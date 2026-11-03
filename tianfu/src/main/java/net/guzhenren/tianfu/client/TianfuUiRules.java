@@ -12,7 +12,7 @@ public final class TianfuUiRules {
     public static Decision purchase(TianfuSelection.Snapshot state,TianfuPool.Spec spec) {
         if(state==null)return new Decision(false,"等待服务端同步",0);
         if(spec==null)return new Decision(false,"该记录已不在目录",state.points());
-        if(!TianfuTalents.isAvailable(spec.id()))return new Decision(false,"所需附属未安装，仅保留历史记录",state.points());
+        if(!TianfuTalents.isAvailable(spec.id()))return new Decision(false,TianfuTalents.unavailableReason(spec.id()),state.points());
         boolean ownsAptitudeTier=state.purchased().stream().anyMatch(TianfuTalents::isAptitudeTier);
         boolean ownsSijue=state.purchased().stream().map(TianfuPool::byId)
                 .anyMatch(other->other!=null&&other.kind()==TianfuPool.Kind.SIJUE);
@@ -38,7 +38,7 @@ public final class TianfuUiRules {
     public static Decision revoke(TianfuSelection.Snapshot state,TianfuPool.Spec spec) {
         if(state==null)return new Decision(false,"等待服务端同步",0);
         if(spec==null)return new Decision(false,"该记录已不在目录",state.points());
-        if(spec.kind()==TianfuPool.Kind.SIJUE||spec.kind()==TianfuPool.Kind.JIYUAN)return new Decision(false,"十绝体与历史机缘不可撤销",state.points());
+        if(spec.kind()==TianfuPool.Kind.SIJUE||spec.kind()==TianfuPool.Kind.JIYUAN)return new Decision(false,"该资质不可撤销",state.points());
         return from(TianfuEconomy.revoke(state,spec.id()));
     }
     private static Decision from(TianfuSelection.Result r) {

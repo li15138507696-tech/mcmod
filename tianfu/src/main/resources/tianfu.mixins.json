@@ -8,9 +8,14 @@
     "JingJieBaoCunProcedureMixin",
     "UikongqiaoquedingProcedureMixin",
     "UishuxingshijuetiProcedureMixin",
-    "YizhuanrendaoxiwangguItemMixin"
+    "YizhuanrendaoxiwangguItemMixin",
+    "CultivationProgressMixin",
+    "CultivationButtonMixin",
+    "NativeRecoveryMixin",
+    "ServerItemCooldownsAccessor",
+    "NativeItemCooldownMixin"
   ],
   "injectors": {
-    "defaultRequire": 0
+    "defaultRequire": 1
   }
 }

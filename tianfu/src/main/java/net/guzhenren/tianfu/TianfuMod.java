@@ -13,6 +13,7 @@ import net.guzhenren.tianfu.net.TianfuStatePayload;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.ModContainer;
 import net.neoforged.fml.common.Mod;
+import net.neoforged.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
 import net.neoforged.neoforge.network.registration.PayloadRegistrar;
@@ -23,7 +24,7 @@ import org.slf4j.LoggerFactory;
  * 蛊真人附属「天赋」入口。
  *
  * <p>自由点来自开局难度（四档），点数与已购天赋永久保留。
- * 本体的十绝体与甲乙丙丁机缘入池，由玩家用点数购买（见 {@link TianfuNative}）。
+ * 本体 9.8 的十绝体与甲乙丙丁资质由玩家用点数选择（见 {@link TianfuNative}）；旧机缘仅保留存档兼容。
  * 所有状态存放在玩家 PersistentData 的 {@code tianfu} 子标签中，不占用本体 PlayerVariables 字段。
  */
 @Mod(TianfuMod.MODID)
@@ -36,9 +37,17 @@ public class TianfuMod {
         // 19 个「X烛」效果（每个凡体一个专属流派侵蚀）
         TianfuZhuEffects.REGISTRY.register(modBus);
         modBus.addListener(TianfuMod::registerPayloads);
+        modBus.addListener(TianfuMod::commonSetup);
         NeoForge.EVENT_BUS.register(TianfuEvents.class);
         // 命令注册用方法引用，避免依赖 register(Class) 的静态方法扫描
         NeoForge.EVENT_BUS.addListener(TianfuCommands::register);
+    }
+
+    private static void commonSetup(FMLCommonSetupEvent event) {
+        event.enqueueWork(() -> {
+            net.guzhenren.tianfu.compat.Guzhenren98Compatibility.verify();
+            TianfuTalents.validateNativeDefinitions();
+        });
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {

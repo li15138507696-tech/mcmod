@@ -15,7 +15,7 @@ import net.minecraft.world.entity.Entity;
  */
 @Mixin(value = UishuxingshijuetiProcedure.class, remap = false)
 public class UishuxingshijuetiProcedureMixin {
-    @Inject(method = "execute", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
+    @Inject(method = "execute(Lnet/minecraft/world/entity/Entity;)Ljava/lang/String;", at = @At("HEAD"), cancellable = true, require = 1, remap = false)
     private static void tianfu$bodyName(Entity entity, CallbackInfoReturnable<String> cir) {
         if (entity == null) {
             return;

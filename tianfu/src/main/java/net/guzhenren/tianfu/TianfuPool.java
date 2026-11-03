@@ -64,7 +64,6 @@ public final class TianfuPool {
             entry("wanfa_jietong", "万法皆通", "极", 16, "所有流派熟练度获取速度 ×3（各流派权重增长 ×3）"),
             entry("shen_tianji_suan", "神·天机神算", GOD_QUALITY, 12, "暴击率 +50%、暴击伤害 +240%、闪避 +24%"),
             entry("shen_bumie_jinshen", "神·不灭金身", GOD_QUALITY, 12, "生命上限 +100%、受击减伤 +20%、每秒回复 5% 生命"),
-            entry("shen_tuntian_shidi", "神·吞天噬地", GOD_QUALITY, 12, "吸血 +12%、反伤 +15%、气运上限 +50；击杀怪物累积道痕"),
             entry("suhui", "宿慧", "天", 5, "每转数提供额外修炼基数与道痕获取"),
             entry("shazhao_tiancheng", "杀招天成", "地", 3, "杀招成功率 +5%、10 槽磨损 −1"),
             entry("shiyuan_zhixing", "噬元之性", "地", 3, "击杀灵体回复真元/念头"),
@@ -73,7 +72,7 @@ public final class TianfuPool {
             entry("niantou_ninglian", "念头凝练", "玄", 2, "念头消耗 −10%"),
             entry("xinshen_ruyuan", "心神如渊", "玄", 2, "沉默时长减半"),
             entry("kuxiu_buchuo", "苦修不辍", "玄", 2, "修炼速度 +20%"),
-            entry("houji_bofa", "厚积薄发", "玄", 2, "突破瓶颈 −20%"),
+            entry("houji_bofa", "厚积薄发", "玄", 2, "本体突破失败概率降低 20%"),
             entry("suiyue_chendian", "岁月沉淀", "玄", 2, "已耗寿元越多、修炼越快"),
             entry("youdou_gaoshou", "游斗高手", "玄", 2, "移动中受击 −6%"),
             entry("jianbi_qingfeng", "剑指偏锋", "玄", 2, "暴击伤害 +30%（需配合暴击精通）"),
@@ -91,7 +90,7 @@ public final class TianfuPool {
     private static final List<Spec> ENTRIES = buildEntries();
 
     /**
-     * 十绝体入池（本体 Uikongqiaoguanbi kongqiao==3 分支的逐号写入，购买后 KE2 原生生效），
+     * 十绝体入池（本体 9.8 UikongqiaoquedingProcedure 的 kongqiao==3 分支逐号写入，购买后 KE2 原生生效），
      * 末位附杀神（tizhi=54，不给开局道痕，效果走 {@link TianfuSlay}，仅购买获得）。
      * 3 号随机魂道/冰雪道、5 号随机炎道/雷道为本体同款随机，购买时在 {@link TianfuNative} 中 roll。
      */
@@ -110,7 +109,7 @@ public final class TianfuPool {
                     "杀戮值累积伤害成长（封顶 5 倍伤害）+ 杀怪噬道（击杀积道痕）；不给开局道痕，愈杀愈强")
     );
 
-    /** 甲乙丙丁机缘入池：写真元上限等字段，KE1 自动反推档位。 */
+    /** 旧甲乙丙丁机缘仅保留存档识别与结算兼容，不进入新页面或随机候选。 */
     private static final List<Spec> JIYUANS = List.of(
             new Spec("jiyuan_ding", "丁等机缘", Kind.JIYUAN, "机缘", 3, 0,
                     "真元上限 200-390、气运上限 1-10、90% 命格 −1（否则天资流畅）"),

@@ -9,6 +9,8 @@ public enum TianfuWizardStep {
     APTITUDE(TianfuPage.APTITUDE, "资质根基"),
     LIUPAI(TianfuPage.LIUPAI, "流派"),
     PHYSIQUE(TianfuPage.PHYSIQUE, "体质"),
+    /** 1.4.15：负面条目从体质页拆出独立成步；不加这一步，新页没有导航入口、点不进去。 */
+    NEGATIVE(TianfuPage.NEGATIVE, "负面"),
     MIND(TianfuPage.MIND, "心智"),
     QIYUN(TianfuPage.QIYUN, "气运"),
     REVIEW(null, "总复核");
@@ -41,7 +43,8 @@ public enum TianfuWizardStep {
     /** Whether this step may be left without selecting anything. */
     public boolean canSkip(int kongqiao, boolean anchorSatisfied) {
         return switch (this) {
-            case ORIGIN, LIUPAI, PHYSIQUE, MIND, QIYUN -> true;
+            // 负面是可选的：一条都不买也能过
+            case ORIGIN, LIUPAI, PHYSIQUE, NEGATIVE, MIND, QIYUN -> true;
             case APTITUDE -> anchorSatisfied || kongqiao >= 1 && kongqiao <= 10;
             case DIFFICULTY, REVIEW -> false;
         };

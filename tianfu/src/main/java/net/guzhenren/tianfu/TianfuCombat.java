@@ -280,21 +280,19 @@ public final class TianfuCombat {
         return mult;
     }
 
-    /** 吸血总比例（体质血煞蜕变 5% + 扩展词条 吸血入魔/吸血如饕 + 神级吞天噬地 12%，可叠加）。 */
+    /** 吸血总比例（体质血煞蜕变 5% + 扩展词条 吸血入魔/吸血如饕，可叠加）。 */
     private static double leechAmount(PlayerVariables v, Set<String> ids) {
         double r = 0.0;
         if (Math.round(v.tizhi) == 53) r += 0.05;  // 血煞蜕变体
-        if (ids.contains("shen_tuntian_shidi")) r += 0.12;  // 神·吞天噬地
         r += TianfuTalents.leech(ids);             // 扩展词条（吸血入魔 / 吸血如饕）
         return Math.min(r, 0.15);                  // 15% 封顶
     }
 
-    /** 反伤：词条右守能铠 4% 概率反弹 10%；神级吞天噬地 25% 概率反弹 15%（取神级）。 */
+    /** 反伤：词条右守能铠 4% 概率反弹 10%；扩展词条按「概率 × 比例」取最强者。 */
     private static void reflectDamage(ServerPlayer victim, Set<String> ids, LivingIncomingDamageEvent event) {
         double chance = 0.0;
         double ratio = 0.0;
         if (ids.contains("youshou_nengkai")) { chance = 0.04; ratio = 0.10; }
-        if (ids.contains("shen_tuntian_shidi")) { chance = 0.25; ratio = 0.15; }
         double[] talent = TianfuTalents.bestReflect(ids);
         if (talent != null && talent[0] * talent[1] > chance * ratio) {
             chance = talent[0];        // 扩展词条：取「概率 × 比例」最强者，避免多条词条数值失控

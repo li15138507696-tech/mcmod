@@ -13,6 +13,7 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.ai.attributes.Attributes;
 import net.minecraft.world.entity.monster.Enemy;
@@ -20,22 +21,11 @@ import net.minecraft.world.entity.monster.Enemy;
 /**
  * 词条 / 体质的持续效果（服务端 tick）。
  *
- * <p>实现通道（逐条对照 spec §8）：真元·念头回复走「读→加→夹到 zuida_*」，
- * <b>一律不写 {@code zuida_zhenyuan}</b>（本体 KE1 每秒钳 999 并会让 kongqiao 反推）；
- * 修炼加速只在玩家处于本体「修炼境界」效果时追加 {@code gushi_xiulian_dangqian}，不抢 ActionBar。
- *
- * <p><b>回复口径（2026-10-20 修正）</b>：词条百分比一律先汇成乘区
- * {@code mult = max(0, 1 + Σ 百分比)}，再乘到 {@link #ZY_REGEN_TICK} / {@link #NT_REGEN_TICK}
- * 自然回复基准上。旧的加性叠乘（{@code 基准 × Σ}）在只有负分项时会穿零，导致无词条玩家被
- * 反扣真元／念头；现在负分项最多把回复压到 0，不会变成消耗。
+ * <p>跟随本体 9.8 的真实结算入口工作：修炼加成只改本体已通过资源与状态门槛的进度增量；
+ * 真元、念头回复只缩放本体实际产生的正向增量；蛊冷却只调整本体下发到服务端冷却表的时长。
+ * 这些持续效果不自行猜测自然回复基线，也不改写真元上限。
  */
 public final class TianfuEffects {
-    /** 真元自然回复基准：每 tick 回复最大真元的比例。 */
-    private static final double ZY_REGEN_TICK = 0.00010;
-    private static final double NT_REGEN_TICK = 0.00010;
-    /** 修炼加速基准：本体打坐时每 tick 的进度增量假设值。 */
-    private static final double XIULIAN_TICK = 0.05;
-
     private TianfuEffects() {
     }
 
@@ -75,9 +65,6 @@ public final class TianfuEffects {
         }
         if (ids.contains("qiyun_weiguang")) { // 气运微光
             addCap(v, 5.0);
-        }
-        if (ids.contains("shen_tuntian_shidi")) { // 神·吞天噬地
-            addCap(v, 50.0);
         }
 
         // 扩展词条表：上限类（乘法）与气运 / 寿元（加法）一次性写入本体字段
@@ -128,9 +115,6 @@ public final class TianfuEffects {
         }
         if (ids.contains("qiyun_weiguang")) {
             addCap(v, -5.0);
-        }
-        if (ids.contains("shen_tuntian_shidi")) {
-            addCap(v, -50.0);
         }
 
         // 扩展词条表反向
@@ -242,75 +226,20 @@ public final class TianfuEffects {
                     player, ids, player.tickCount);
         }
 
-        // ---- 真元回复（夹到 zuida_zhenyuan，绝不改写上限）----
-        // 口径：全部加成先汇成「乘区」mult = 1 + Σ(百分比)，再乘到自然回复基准 ZY_REGEN_TICK 上。
-        // 绝不用加性叠乘（0.0001 + 0.0001 × (−0.30) 会穿零，导致无任何词条也净扣真元）。
-        // 负分项（真元枯竭 −30%）只是把回复乘区压到 0.70，下限由 Math.max(0.0, …) 兜住，绝不穿零。
-        double zy = ZY_REGEN_TICK * multiplier(1.0 + TianfuTalents.regenZy(ids));
-        if (ids.contains("zhenyuan_ninglian")) {
-            zy += ZY_REGEN_TICK * 0.2;       // 真元消耗 −10% 的等效回复（正项，安全）
-        }
-        if (tizhi == 31) {
-            zy += ZY_REGEN_TICK * 0.15;      // 太息养元体
-        }
-        if (tizhi == 40 && night) {
-            zy += ZY_REGEN_TICK * 0.8;       // 明月入怀体（夜间）
-        }
-        if (zy != 0.0) {
-            v.zhenyuan = clamp(v.zhenyuan + v.zuida_zhenyuan * zy, 0.0, v.zuida_zhenyuan);
-            touched = true;
-        }
-
-        // ---- 念头回复（与真元同口径：乘区 + 0 地板）----
-        double nt = NT_REGEN_TICK * multiplier(1.0 + TianfuTalents.regenNt(ids));
-        if (ids.contains("niantou_ninglian")) {
-            nt += NT_REGEN_TICK * 0.2;
-        }
-        if (tizhi == 48) {
-            nt += NT_REGEN_TICK * 0.3;       // 南柯一梦体
-        }
-        if (nt != 0.0) {
-            v.niantou = clamp(v.niantou + v.niantou_rongliang * nt, 0.0, v.niantou_rongliang);
-            touched = true;
-        }
-
-        // ---- 修炼加速（仅打坐时；本体用 ActionBar 显示进度，我们只改字段）----
-        double xiulian = 0.0;
-        if (player.hasEffect(GuzhenrenModMobEffects.XIULIANJINGJIE)) {
-            if (ids.contains("suhui")) {
-                xiulian += XIULIAN_TICK * 0.05 * Math.max(1.0, v.zhuanshu); // 宿慧：按转数
-            }
-            if (ids.contains("kuxiu_buchuo")) {
-                xiulian += XIULIAN_TICK * 0.20;
-            }
-            if (ids.contains("suiyue_chendian")) {
-                xiulian += XIULIAN_TICK * 0.10;
-            }
-            if (ids.contains("houji_bofa")) {
-                xiulian += XIULIAN_TICK * 0.10; // 突破瓶颈 −20% 的进度等效
-            }
-            xiulian += XIULIAN_TICK * TianfuTalents.xiulian(ids);
-            xiulian += XIULIAN_TICK * 0.5 * TianfuTalents.breakthrough(ids); // 与 houji_bofa 同口径折半
-        }
-        if (xiulian != 0.0) {
-            v.gushi_xiulian_dangqian = clamp(
-                    v.gushi_xiulian_dangqian + xiulian, 0.0, v.gushi_xiulian_jindu);
-            touched = true;
-        }
-
-        // ---- 蛊 / 杀招：缩短冷却（本体字段无百分比口径，直接按比例削减剩余 CD）----
-        double guCd = TianfuTalents.guCd(ids);
-        if (guCd != 0.0 && v.cd > 0.0) {
-            v.cd = Math.max(0.0, v.cd - guCd);
-            touched = true;
-        }
-        double shazhaoCd = (ids.contains("shazhao_tiancheng") ? 0.1 : 0.0) + TianfuTalents.shazhaoCd(ids);
-        if (shazhaoCd > 0.0) {
-            v.sanzhao_CD = Math.max(0.0, v.sanzhao_CD - shazhaoCd);
-            v.sanzhao_CD1 = Math.max(0.0, v.sanzhao_CD1 - shazhaoCd);
-            v.sanzhao_CD2 = Math.max(0.0, v.sanzhao_CD2 - shazhaoCd);
-            v.sanzhao_CD3 = Math.max(0.0, v.sanzhao_CD3 - shazhaoCd);
-            touched = true;
+        // 9.8 的回复、温养与蛊冷却由真实本体过程钩子处理，保留本体资源门禁与节拍。
+        // 杀招天赋的单位为每个游戏 tick 的额外冷却量，直接作用于已核实的四个本体计时字段。
+        double shazhaoCd = TianfuTalents.shazhaoCd(ids);
+        if (Double.isFinite(shazhaoCd) && shazhaoCd != 0.0) {
+            double cd0 = extraCooldownStep(v.sanzhao_CD, shazhaoCd);
+            double cd1 = extraCooldownStep(v.sanzhao_CD1, shazhaoCd);
+            double cd2 = extraCooldownStep(v.sanzhao_CD2, shazhaoCd);
+            double cd3 = extraCooldownStep(v.sanzhao_CD3, shazhaoCd);
+            touched |= cd0 != v.sanzhao_CD || cd1 != v.sanzhao_CD1
+                    || cd2 != v.sanzhao_CD2 || cd3 != v.sanzhao_CD3;
+            v.sanzhao_CD = cd0;
+            v.sanzhao_CD1 = cd1;
+            v.sanzhao_CD2 = cd2;
+            v.sanzhao_CD3 = cd3;
         }
         // ---- 炼蛊进度加成 ----
         // 本体真实机制（javap 实测）：
@@ -432,7 +361,7 @@ public final class TianfuEffects {
             TianfuTalents.maintainEffects(player, ids);   // 常驻药水效果（夜视 / 抗性 / 防火 等）
         }
 
-        maintainV2(player);
+        net.guzhenren.tianfu.v2.NeoForge1211Adapter.maintainConstraints(player, ids);
 
         if (touched) {
             v.markSyncDirty();
@@ -528,6 +457,121 @@ public final class TianfuEffects {
         return t >= 13000L && t <= 23000L;
     }
 
+    /**
+     * 从已购列表里挑出「应当生效的体质档位」。
+     *
+     * <p>只认 {@link TianfuPool.Kind#BODY}（凡体，tizhi 17-53）与
+     * {@link TianfuPool.Kind#SIJUE}（十绝体 1-10 / 杀神 54）。两者互斥
+     * （{@code TianfuEconomy} 已保证），这里取第一个命中的。没有体质返回 0（凡人）。
+     *
+     * <p>抽成纯函数，便于脱离游戏跑回归测试。
+     */
+    static int physiqueTizhi(java.util.Collection<String> purchased) {
+        if (purchased == null) {
+            return 0;
+        }
+        for (String id : purchased) {
+            TianfuPool.Spec spec = TianfuPool.byId(id);
+            if (spec == null) {
+                continue;
+            }
+            if (spec.kind() == TianfuPool.Kind.SIJUE || spec.kind() == TianfuPool.Kind.BODY) {
+                return spec.tizhi();
+            }
+        }
+        return 0;
+    }
+
+    /**
+     * 空窍资质的<b>最终</b> kongqiao 值。
+     *
+     * <p>本体 {@code KE1Procedure} 会按真元上限把 kongqiao 反推成 甲2 / 乙1 / 丙5 / 丁8
+     * （详见 {@code TianfuNative#applyAptitudeTier} 的注释）。这里按同一口径还原。
+     */
+    static double aptitudeKongqiao(java.util.Collection<String> purchased) {
+        if (purchased == null) {
+            return 0.0;
+        }
+        for (String id : purchased) {
+            switch (id) {
+                case "v2_apt_jia":
+                    return 2.0;
+                case "v2_apt_yi":
+                    return 1.0;
+                case "v2_apt_bing":
+                    return 5.0;
+                case "v2_apt_ding":
+                    return 8.0;
+                default:
+                    break;
+            }
+        }
+        return 0.0;
+    }
+
+    /** 旧调用入口仅重建附属派生属性；不覆盖本体合法变更的体质或资质。 */
+    @Deprecated
+    static void healPhysique(ServerPlayer player) {
+        if (player != null) TianfuAttributes.sync(player);
+    }
+
+    /**
+     * 推进「温养空窍」进度。
+     *
+     * <p>本体对这两个字段的用法（反编译 {@code UIxiuliananjianProcedure} 与
+     * {@code XiulianjingjieXiaoGuoChiXuShiMeiKeFaShengProcedure} 确认）：
+     * <ul>
+     *   <li>打坐每 tick 是 {@code dangqian = dangqian + 增量}，<b>本体自己不 clamp</b>；</li>
+     *   <li>判定突破用 {@code dangqian == jindu} <b>精确相等</b>（offset 372-390，
+     *       {@code dcmpl} + {@code ifne}，不等就 return），「已满」判定同理（offset 225-243）。</li>
+     * </ul>
+     *
+     * <p>所以只要进度冲过目标，就永远「差一点」、永远无法突破。1.4.10 之前这里是
+     * 无条件 {@code clamp(dangqian + xiulian, 0, jindu)}：{@code xiulian} 为负时
+     * （心智有损 −0.40、另一条 −0.30）会把刚满的 400 打成 399.98，下一 tick 本体又
+     * 加过头，如此往复——玩家点突破时读到的永远是不等于，表现就是
+     * 「温养差一点点、永远突破不了」。
+     *
+     * <p>这里保证三件事：<b>溢出对齐</b>到 {@code jindu}、<b>正向</b>加速后夹到
+     * {@code jindu}、<b>负向</b>只压未满的进度且绝不在已满时往回拉。
+     *
+     * @param dangqian 当前进度
+     * @param jindu    目标进度（本体写入，0 表示还没设定）
+     * @param xiulian  本 tick 的加速量（可为负）
+     * @return 新的当前进度
+     */
+    static double wenyangStep(double dangqian, double jindu, double xiulian) {
+        if (!Double.isFinite(jindu) || jindu <= 0.0) {
+            return dangqian; // 没有目标，不碰
+        }
+        if (!Double.isFinite(dangqian)) {
+            return 0.0;
+        }
+        if (!Double.isFinite(xiulian)) {
+            xiulian = 0.0;
+        }
+        if (dangqian >= jindu - Math.max(1.0e-8, Math.ulp(jindu) * 8.0)) {
+            return jindu; // 溢出对齐：让突破重新可用
+        }
+        if (xiulian > 0.0) {
+            return clamp(dangqian + xiulian, 0.0, jindu);
+        }
+        if (xiulian < 0.0 && dangqian < jindu) {
+            return Math.max(0.0, dangqian + xiulian); // 只压未满
+        }
+        return dangqian; // 已满 / 无加速：保持不动
+    }
+
+    /** 兼容 1.4.12 的入口：只对齐完成边界，不在玩家 tick 中伪造本体修炼增量。 */
+    public static void alignCultivation(Entity entity) {
+        TianfuNativeProgression.align(entity);
+    }
+
+    private static double extraCooldownStep(double current, double extra) {
+        return Double.isFinite(current) && current > 0.0
+                ? Math.max(0.0, current - extra) : current;
+    }
+
     private static double clamp(double value, double min, double max) {
         return value < min ? min : (value > max ? max : value);
     }
@@ -549,13 +593,7 @@ public final class TianfuEffects {
      * @throws IllegalStateException 适配层字段失配时中止该次处理，不宣称已生效
      */
     public static void maintainV2(ServerPlayer player) {
-        if (player == null) {
-            return;
-        }
-        net.guzhenren.tianfu.v2.TianfuSelection.Snapshot snapshot =
-                net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
-        if (!snapshot.confirmed()) {
-            return;
-        }
-        new net.guzhenren.tianfu.v2.NeoForge1211Adapter().maintain(player, snapshot);    }
+        if (player == null) return;
+        net.guzhenren.tianfu.v2.NeoForge1211Adapter.maintainConstraints(player, TianfuApply.effective(player));
+    }
 }

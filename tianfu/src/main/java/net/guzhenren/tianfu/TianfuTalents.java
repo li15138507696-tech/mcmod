@@ -37,6 +37,10 @@ import net.minecraft.world.effect.MobEffects;
  * 字段名经 javap 实测，本体确实混用 {@code daohen_} 与 {@code dahen_} 两套前缀；走反射以规避拼写风险。
  */
 public final class TianfuTalents {
+    private static final java.util.Map<String, String> NATIVE_UNAVAILABLE = new java.util.concurrent.ConcurrentHashMap<>(Map.of(
+            "zhenyuan_ninglian", "本体 9.8 未提供统一真元扣费入口，尚不能完整兑现降耗；仅保留旧记录",
+            "niantou_ninglian", "本体 9.8 未提供统一念头扣费入口，尚不能完整兑现降耗；仅保留旧记录",
+            "shazhao_tiancheng", "杀招成功率与槽位磨损尚无完整的 9.8 钩子；仅保留旧记录"));
     /** 效果原语。 */
     public enum Op {
         HEALTH_MULT, ATTACK_MULT, SPEED_MULT, ATTACK_SPEED_MULT,
@@ -133,17 +137,23 @@ public final class TianfuTalents {
 
     private static final List<Talent> BASE = List.of(
             // V2：新增纯数据；效果行为待适配层填充。
-            t("v2_apt_ding", "丁等空窍", "黄", 1, "直接将空窍资质设为丁等（kongqiao=8）", f(Op.APTITUDE_SET, 8)),
-            t("v2_apt_bing", "丙等空窍", "玄", 3, "直接将空窍资质设为丙等（kongqiao=6）", f(Op.APTITUDE_SET, 6)),
-            t("v2_apt_yi", "乙等空窍", "地", 6, "直接将空窍资质设为乙等（kongqiao=4）", f(Op.APTITUDE_SET, 4)),
-            t("v2_apt_jia", "甲等空窍", "天", 10, "直接将空窍资质设为甲等（kongqiao=2）", f(Op.APTITUDE_SET, 2)),
+            // 空窍资质四档：这里的数值是「先写进 kongqiao 的初值」，随后
+            // TianfuNative.applyAptitudeTier 会按档位 roll 真元上限，而本体 KE1Procedure
+            // 会按真元上限把 kongqiao **反推**成最终值：
+            //   真元 800–999 → 2（甲）／600–799 → 1（乙）／400–599 → 5（丙）／200–399 → 不匹配（保持 8 = 丁）
+            // 所以描述里写的是「最终」档位值，不是这里的初值——初值会被覆盖，
+            // 曾因此让玩家以为「买了丙等却显示 5、跟描述写的 6 不符」。
+            t("v2_apt_ding", "丁等空窍", "黄", 1, "丁等空窍，真元上限 200–390，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 8)),
+            t("v2_apt_bing", "丙等空窍", "玄", 3, "丙等空窍，真元上限 400–590，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 6)),
+            t("v2_apt_yi", "乙等空窍", "地", 6, "乙等空窍，真元上限 600–790，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 4)),
+            t("v2_apt_jia", "甲等空窍", "天", 10, "甲等空窍，真元上限 800–990，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 2)),
             t("v2_jingli_buji", "精力不济", "负", -2, "精力上限 −20%", fld("zuida_jingli", -0.20)),
             t("v2_gu_cd_ningse", "催蛊凝涩", "负", -2, "蛊冷却每 tick 额外增加 0.10，仅对正在冷却的蛊", f(Op.GU_CD, -0.10)),
             t("v2_zhenyuan_kubai", "真元枯败", "负", -5, "真元回复 −75%（旧 −30% 的 2.5 倍）", f(Op.REGEN_ZY, -0.75)),
             t("v2_routi_canque", "肉体残缺", "负", -5, "生命上限 −50%（旧 −20% 的 2.5 倍）", f(Op.HEALTH_MULT, -0.50)),
             t("v2_shouyuan_kuwei", "寿元枯萎", "负", -5, "寿元 −250（旧 −100 的 2.5 倍，确认前显示致死风险）", fldAdd("shouyuan", -250)),
             t("v2_qiyun_duanjue", "气运断绝", "负", -5, "基础气运上限 −37.5%（旧 −15% 的 2.5 倍）", fld("qiyun_shangxian", -0.375)),
-            t("v2_xinzhi_yousun", "心智有损", "负", -5, "修炼速度 −40%、突破瓶颈 +50%（规格锁定的复合代价）", f(Op.XIULIAN, -0.40), f(Op.BREAKTHROUGH, -0.50)),
+            t("v2_xinzhi_yousun", "心智有损", "负", -5, "修炼速度 −40%、本体突破失败概率提高 50%", f(Op.XIULIAN, -0.40), f(Op.BREAKTHROUGH, -0.50)),
             t("v2_aptitude_shackled", "空窍桎梏", "负", -8, "本世锁定确认时原有资质；念头容量 −100%，不允许后续机缘或十绝体突破锁定", f(Op.V2_APTITUDE_LOCK, 1), fld("niantou_rongliang", -1.0)),
             t("v2_luck_forfeit", "天弃之命", "负", -8, "本世气运与气运上限持续为 0；气运增益不能抵消，约四倍量级并附不可补回代价", f(Op.V2_LUCK_ZERO, 1)),
             t("v2_lifespan_scar", "命烛残尽", "负", -8, "确认时寿元 −400，且本世寿元恢复与增加无效；寿元不足不得确认", fldAdd("shouyuan", -400), f(Op.V2_LIFESPAN_SCAR, 1)),
@@ -235,7 +245,7 @@ public final class TianfuTalents {
             t("zhenyuan_huiliu", "真元回流", "玄", 2, "真元回复 +35%", f(Op.REGEN_ZY, 0.35)),
 
             // ---- 地（3 点）：21 条 ----
-            t("tupo_tongtian", "突破通天", "地", 3, "突破瓶颈 −30%", f(Op.BREAKTHROUGH, 0.30)),
+            t("tupo_tongtian", "突破通天", "地", 3, "本体突破失败概率降低 30%", f(Op.BREAKTHROUGH, 0.30)),
             t("dazuo_wangwo", "打坐忘我", "地", 3, "打坐时修炼进度 +40%", f(Op.XIULIAN, 0.40)),
             t("liangu_rushen", "炼蛊如神", "地", 3, "炼蛊进度 +40%", f(Op.LIANGU, 0.40)),
             t("gudao_dup", "蛊道独步", "地", 3, "额外蛊冷却缩短（每 tick −0.25；熟练度降耗由本体另计）", f(Op.GU_CD, 0.25)),
@@ -275,7 +285,7 @@ public final class TianfuTalents {
             t("xixue_rushi", "吸血如饕", "天", 5, "攻击吸血 +10%", f(Op.LEECH, 0.10)),
             t("fanshang_rushan", "反伤如山", "天", 5, "受击 20% 概率反弹 35% 伤害", reflect(0.20, 0.35)),
             t("jianjia_rushen", "坚甲如神", "天", 5, "非护甲减伤 +25%", f(Op.REDUCTION, 0.25)),
-            t("xiulian_rushen", "修炼如神", "天", 5, "修炼速度 +60%、突破瓶颈 −40%",
+            t("xiulian_rushen", "修炼如神", "天", 5, "修炼速度 +60%、本体突破失败概率降低 40%",
                     f(Op.XIULIAN, 0.60), f(Op.BREAKTHROUGH, 0.40)),
             t("liangu_bujie", "炼蛊不竭", "天", 5, "炼蛊进度 +60%、蛊冷却缩短（每 tick −0.3）",
                     f(Op.LIANGU, 0.60), f(Op.GU_CD, 0.30)),
@@ -302,7 +312,7 @@ public final class TianfuTalents {
                     f(Op.ATTACK_MULT, 0.60), f(Op.ATTACK_SPEED_MULT, 0.25)),
             t("shen_jingang_buhuai", "神·金刚不坏", "神", 12, "击退抗性 +1、非护甲减伤 +35%",
                     f(Op.KNOCKBACK_FLAT, 1.0), f(Op.REDUCTION, 0.35)),
-            t("shen_xiulian_wuji", "神·修炼无极", "神", 12, "修炼速度 +150%、突破瓶颈 −60%",
+            t("shen_xiulian_wuji", "神·修炼无极", "神", 12, "修炼速度 +150%、本体突破失败概率降低 60%",
                     f(Op.XIULIAN, 1.50), f(Op.BREAKTHROUGH, 0.60)),
             t("shen_liangu_tianshu", "神·炼蛊天术", "神", 12, "炼蛊进度 +90%、蛊冷却缩短（每 tick −0.5）",
                     f(Op.LIANGU, 0.90), f(Op.GU_CD, 0.50)),
@@ -316,7 +326,7 @@ public final class TianfuTalents {
             // ---- 极（16 点）：2 条 ----
             t("ji_wanshi_bumie", "极·万世不灭", "极", 16, "生命上限 +150%、每 5 秒回复 40% 生命、非护甲减伤 +40%",
                     f(Op.HEALTH_MULT, 1.50), f(Op.REGEN_HP_5S, 0.40), f(Op.REDUCTION, 0.40)),
-            t("ji_zhongdao_zhizun", "极·众道至尊", "极", 16, "44 项非汇总道痕各 +3000（效率各 +300%，不直接增伤）、修炼速度 +200%、突破瓶颈 −80%",
+            t("ji_zhongdao_zhizun", "极·众道至尊", "极", 16, "44 项非汇总道痕各 +3000（效率各 +300%，不直接增伤）、修炼速度 +200%、本体突破失败概率降低 80%",
                     f(Op.DAOHEN_ALL, 3000), f(Op.XIULIAN, 2.00), f(Op.BREAKTHROUGH, 0.80)),
 
             // ---- 负（−2 点）：10 条 ----
@@ -330,7 +340,7 @@ public final class TianfuTalents {
             t("hunli_shuairuo", "魂力衰弱", "负", -2, "魂魄上限 −25%、承载极限 −25%",
                     fld("zuida_hunpo", -0.25), fld("hunpochengzaijixian", -0.25)),
             t("nianfu_xiayai", "念府狭隘", "负", -2, "念头容量 −25%", fld("niantou_rongliang", -0.25)),
-            t("xiuxing_chizhi", "修行迟滞", "负", -2, "修炼速度 −30%、突破瓶颈 +40%",
+            t("xiuxing_chizhi", "修行迟滞", "负", -2, "修炼速度 −30%、本体突破失败概率提高 40%",
                     f(Op.XIULIAN, -0.30), f(Op.BREAKTHROUGH, -0.40))
     );
 
@@ -490,18 +500,39 @@ public final class TianfuTalents {
      * 玩家就会变成点数白扣且无法撤销。故这里从全表查。
      */
     public static TianfuPool.Spec byIdIncludingUnavailable(String id) {
-        for (Talent talent : ALL) {
-            if (talent.id().equals(id)) {
-                return specOf(talent);
-            }
-        }
-        return null;
+        Talent talent = BY_ID.get(id);
+        return talent == null ? null : specOf(talent);
     }
 
     /** 该词条在当前环境是否可兑现（所需附属已安装）；未知 id 视为可用（交给别处兜底）。 */
     public static boolean isAvailable(String id) {
+        if (NATIVE_UNAVAILABLE.containsKey(id)) return false;
         Talent talent = BY_ID.get(id);
         return talent == null || available(talent);
+    }
+
+    public static String unavailableReason(String id) {
+        return NATIVE_UNAVAILABLE.getOrDefault(id, "所需附属或对应效果当前不可用，仅保留历史记录");
+    }
+
+    /** Called after registries are populated, before any player can purchase an effect. */
+    public static void validateNativeDefinitions() {
+        for (Talent talent : ALL) {
+            for (Fx fx : talent.fx()) {
+                if (fx.op() == Op.FIELD_ADD || fx.op() == Op.FIELD_MULT) {
+                    try {
+                        if (PlayerVariables.class.getField(fx.arg()).getType() != double.class)
+                            throw new IllegalStateException("9.8 字段类型不匹配: " + fx.arg());
+                    } catch (NoSuchFieldException failure) {
+                        throw new IllegalStateException("9.8 天赋字段缺失: " + talent.id() + "/" + fx.arg(), failure);
+                    }
+                }
+                if (fx.op() == Op.MOB_EFFECT && modLoadedFor(fx.arg()) && effectOf(fx.arg()) == null) {
+                    NATIVE_UNAVAILABLE.put(talent.id(), "当前注册表缺少效果 " + fx.arg() + "，仅保留历史记录");
+                    TianfuMod.LOGGER.warn("[天命] 停用未能兑现的天赋 {}：缺少效果 {}", talent.id(), fx.arg());
+                }
+            }
+        }
     }
 
     /**
@@ -515,6 +546,7 @@ public final class TianfuTalents {
      * 解析一次 —— 真解析不到只会「不生效」，不会崩，也不会隐藏。
      */
     private static boolean available(Talent talent) {
+        if (NATIVE_UNAVAILABLE.containsKey(talent.id())) return false;
         for (Fx fx : talent.fx()) {
             if (fx.op() == Op.MOB_EFFECT && !modLoadedFor(fx.arg())) {
                 return false;
@@ -613,6 +645,7 @@ public final class TianfuTalents {
         } catch (IllegalAccessException | IllegalArgumentException failure) {
             throw new IllegalStateException("无法写入本体 kongqiao 字段", failure);
         }
+        TianfuNative.applyAptitudeTier(player, v, aptitude);
     }
 
     /** Restore the aptitude captured by {@link #setAptitude} and remove its one-use snapshot. */
@@ -710,7 +743,7 @@ public final class TianfuTalents {
 
     // ------------------------------------------------------------------ 引擎：周期类（tick）
 
-    /** 真元回复加成（叠加到 {@link TianfuEffects} 的每 tick 回复比例）。 */
+    /** 真元回复加成（缩放本体 KE1 实际产生的正向回复增量）。 */
     public static double regenZy(Set<String> ids) {
         return sum(ids, Op.REGEN_ZY);
     }
@@ -730,7 +763,7 @@ public final class TianfuTalents {
         return sum(ids, Op.XIULIAN);
     }
 
-    /** 突破瓶颈减免（按本体既有口径折半计入修炼进度）。 */
+    /** 本体突破失败概率减免（由真实突破判定钩子处理）。 */
     public static double breakthrough(Set<String> ids) {
         return sum(ids, Op.BREAKTHROUGH);
     }
@@ -894,8 +927,12 @@ public final class TianfuTalents {
 
     private static double sum(Set<String> ids, Op op) {
         double total = 0.0;
-        for (Talent talent : owned(ids)) {
-            for (Fx fx : talent.fx()) {
+        for (String id : ids) {
+            Talent talent = BY_ID.get(id);
+            if (talent == null) continue;
+            List<Fx> effects = talent.fx();
+            for (int i = 0, count = effects.size(); i < count; i++) {
+                Fx fx = effects.get(i);
                 if (fx.op() == op) {
                     total += fx.a();
                 }
@@ -1055,9 +1092,10 @@ public final class TianfuTalents {
         return out;
     }
 
-    /** 反射读写本体字段（字段名已实测存在；单字段失败静默跳过，不影响其余条目）。 */
+    /** A settlement must fail and roll back if a promised native field cannot be written. */
     private static void add(PlayerVariables v, String field, double delta) {
-        tryAdd(v, field, delta);
+        if (delta != 0.0 && !tryAdd(v, field, delta))
+            throw new IllegalStateException("本体 9.8 字段无法写入: " + field);
     }
 
     /** @return 是否写入成功（字段不存在返回 false，供「大小写两种写法」回退用） */
@@ -1087,8 +1125,8 @@ public final class TianfuTalents {
         try {
             Field f = PlayerVariables.class.getField(field);
             f.setDouble(v, f.getDouble(v) * factor);
-        } catch (ReflectiveOperationException ignored) {
-            // 同上
+        } catch (ReflectiveOperationException failure) {
+            throw new IllegalStateException("本体 9.8 字段无法修改: " + field, failure);
         }
     }
 

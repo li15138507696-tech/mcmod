@@ -2,12 +2,14 @@
 package net.guzhenren.tianfu.v2;
 
 import java.lang.reflect.Field;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
 import net.guzhenren.network.GuzhenrenModVariables;
 import net.guzhenren.network.GuzhenrenModVariables.PlayerVariables;
 import net.guzhenren.tianfu.TianfuData;
+import net.guzhenren.tianfu.compat.Guzhenren98Settlement;
 import net.minecraft.server.level.ServerPlayer;
 
 /**
@@ -104,12 +106,16 @@ public final class NeoForge1211Adapter implements VersionAdapter {
                 }
             }
         }
-        // 3) 命烛残尽：寿元不足不得确认（不能确认出一个当场死亡的角色）。
-        if (state.purchased().contains(NEG_LIFESPAN)
-                && vars(player).shouyuan - LIFESPAN_SCAR_COST <= 0.0) {
-            return TianfuSelection.Rejection.UNSAFE_LIFESPAN;
-        }
+        // 寿元必须在全部一次性正负效果结算后统一检查，不能先拒绝可被增益抵消的代价。
         return TianfuSelection.Rejection.NONE;
+    }
+
+    @Override
+    public TianfuSelection.Rejection validateSettlement(ServerPlayer player, TianfuSelection.Snapshot state) {
+        double finalLifespan = Guzhenren98Settlement.lifespanAfterHardCost(vars(player).shouyuan,
+                state.purchased().contains(NEG_LIFESPAN));
+        return Guzhenren98Settlement.validLifespan(finalLifespan)
+                ? TianfuSelection.Rejection.NONE : TianfuSelection.Rejection.UNSAFE_LIFESPAN;
     }
 
     /** {@inheritDoc} 每个一次性效果独立幂等键，失败必须可恢复而不双写。 */
@@ -150,7 +156,7 @@ public final class NeoForge1211Adapter implements VersionAdapter {
             add(v, FIELD_NIANTOU_RONGLIANG, -Math.abs(v.niantou_rongliang));
         }
         if (state.purchased().contains(NEG_LIFESPAN)) {
-            v.shouyuan = Math.max(0.0, v.shouyuan - LIFESPAN_SCAR_COST);
+            v.shouyuan -= LIFESPAN_SCAR_COST;
             TianfuData.putDouble(player, KEY_LIFESPAN_CAP, v.shouyuan);
         }
     }
@@ -158,6 +164,15 @@ public final class NeoForge1211Adapter implements VersionAdapter {
     /** {@inheritDoc} 炼蛊额外进度只补整数到99，50至70投料窗口不加速。 */
     @Override
     public void maintain(ServerPlayer player, TianfuSelection.Snapshot state) {
+        maintainConstraints(player, state.purchased());
+    }
+
+    /** Reuse the tick's authoritative selection; receipts and origin are not needed here. */
+    public static void maintainConstraints(ServerPlayer player, Collection<String> ids) {
+        boolean luckForfeit = ids.contains(NEG_LUCK);
+        boolean aptitudeLock = ids.contains(NEG_APTITUDE);
+        boolean lifespanScar = ids.contains(NEG_LIFESPAN);
+        if (!luckForfeit && !aptitudeLock && !lifespanScar) return;
         PlayerVariables v = vars(player);
         double oldLuck = v.qiyun;
         double oldLuckCap = v.qiyun_shangxian;
@@ -165,13 +180,13 @@ public final class NeoForge1211Adapter implements VersionAdapter {
         double oldLifespan = v.shouyuan;
 
         // 天弃之命：气运与上限持续归零，增益不能抵消。
-        if (state.purchased().contains(NEG_LUCK)) {
+        if (luckForfeit) {
             v.qiyun = 0.0;
             v.qiyun_shangxian = 0.0;
         }
 
         // 空窍桎梏：把 kongqiao 压回锁定值（后续机缘/十绝体无法突破）。
-        if (state.purchased().contains(NEG_APTITUDE)) {
+        if (aptitudeLock) {
             double locked = TianfuData.getDouble(player, KEY_LOCK_KONGQIAO, -1.0);
             if (locked >= 0.0 && v.kongqiao != locked) {
                 v.kongqiao = locked;
@@ -179,7 +194,7 @@ public final class NeoForge1211Adapter implements VersionAdapter {
         }
 
         // 命烛残尽：本世寿元不得增加。
-        if (state.purchased().contains(NEG_LIFESPAN)) {
+        if (lifespanScar) {
             double cap = TianfuData.getDouble(player, KEY_LIFESPAN_CAP, -1.0);
             if (cap >= 0.0) {
                 v.shouyuan = Math.min(v.shouyuan, cap);

@@ -47,3 +47,8 @@ replay_pid*.log
 Thumbs.db
 desktop.ini
 .DS_Store
+# 未纳入的崩溃/测试服务器工作区（含本体 jar 与原版服务端，数百 MB）
+_crash*/
+
+# 构建压缩包
+/tianfu.zip

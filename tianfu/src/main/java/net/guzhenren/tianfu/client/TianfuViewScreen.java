@@ -125,12 +125,18 @@ public class TianfuViewScreen extends Screen {
             for(String id:TianfuPageTable.BY_ID.keySet().stream().sorted().toList()){
                 if(TianfuPageTable.BY_ID.get(id)!=page)continue;
                 var s=specFor(id);if(s==null||!TianfuTalents.isAvailable(id)&&!owned(s)&&!pending.contains(id))continue;
-                rows.add(new Row(id,s.name(),s.desc(),s,null));
+                rows.add(new Row(id,s.name(),s.desc()+(TianfuTalents.isAvailable(id)?"":"；"+TianfuTalents.unavailableReason(id)),s,null));
             }
         }
         if(page==TianfuPage.APTITUDE){
             rows.sort(java.util.Comparator.comparingInt((Row r)->switch(categoryOf(r)){
                 case "空窍档位"->0;case "十绝体"->1;default->2;
+            }).thenComparing(Row::id));
+        }
+        if(page==TianfuPage.NEGATIVE){
+            // 「全部」视图里也要按扣点从重到轻排，不能混着按 id 排
+            rows.sort(java.util.Comparator.comparingInt((Row r)->switch(categoryOf(r)){
+                case "重负 −8"->0;case "中度 −5"->1;default->2;
             }).thenComparing(Row::id));
         }
         categoryLabels=categoriesFor(rows);
@@ -150,9 +156,10 @@ public class TianfuViewScreen extends Screen {
         List<String> order=switch(page){
             case DIFFICULTY->List.of();
             case ORIGIN->List.of("地域","出身");
-            case APTITUDE->List.of("空窍档位","十绝体","历史机缘");
+            case APTITUDE->List.of("空窍档位","十绝体");
             case LIUPAI->List.of("亲和","大成","神级","其他");
-            case PHYSIQUE->List.of("负面","正面","十绝体");
+            case PHYSIQUE->List.of("正面","十绝体");
+            case NEGATIVE->List.of("轻负 −2","中度 −5","重负 −8");
             case MIND->List.of("修炼","念头","炼蛊","冷却","其他");
             case QIYUN->List.of("气运");
         };
@@ -165,7 +172,7 @@ public class TianfuViewScreen extends Screen {
         if(page==TianfuPage.APTITUDE){
             if(TianfuTalents.isAptitudeTier(row.id()))return "空窍档位";
             if(row.spec()!=null&&row.spec().kind()==TianfuPool.Kind.SIJUE)return "十绝体";
-            return "历史机缘";
+            return "";
         }
         if(page==TianfuPage.LIUPAI){
             if(row.id().endsWith("_qinhe"))return "亲和";
@@ -175,8 +182,14 @@ public class TianfuViewScreen extends Screen {
         }
         if(page==TianfuPage.PHYSIQUE){
             if(row.spec()!=null&&row.spec().kind()==TianfuPool.Kind.SIJUE)return "十绝体";
-            if(row.spec()!=null&&row.spec().cost()<0)return "负面";
             return "正面";
+        }
+        if(page==TianfuPage.NEGATIVE){
+            // 负面条目按扣点档位分组，−8 最重排最前
+            int cost=row.spec()==null?0:row.spec().cost();
+            if(cost<=-8)return "重负 −8";
+            if(cost<=-5)return "中度 −5";
+            return "轻负 −2";
         }
         if(page==TianfuPage.MIND){
             String id=row.id();
@@ -260,7 +273,8 @@ public class TianfuViewScreen extends Screen {
     private boolean actionable(){return snapshot!=null&&!confirmed&&waitTicks==0;}
     private boolean hasAnchorSelection(){return kongqiao>=1&&kongqiao<=10||purchased.stream().anyMatch(TianfuTalents::isAptitudeTier)||purchased.stream().map(this::specFor).anyMatch(s->s!=null&&(s.kind()==TianfuPool.Kind.SIJUE||s.kind()==TianfuPool.Kind.JIYUAN));}
     private boolean isTalentSelectionStep(){return wizardStep==TianfuWizardStep.APTITUDE||wizardStep==TianfuWizardStep.LIUPAI
-            ||wizardStep==TianfuWizardStep.PHYSIQUE||wizardStep==TianfuWizardStep.MIND||wizardStep==TianfuWizardStep.QIYUN;}
+            ||wizardStep==TianfuWizardStep.PHYSIQUE||wizardStep==TianfuWizardStep.NEGATIVE
+            ||wizardStep==TianfuWizardStep.MIND||wizardStep==TianfuWizardStep.QIYUN;}
     private boolean canConfirm(){return wizardStep==TianfuWizardStep.REVIEW&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&hasAnchorSelection();}
     private boolean canRoll(){return isTalentSelectionStep()&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&rolls<TianfuRoll.MAX_ROLLS;}
     private boolean canAccept(){return isTalentSelectionStep()&&actionable()&&!pending.isEmpty()&&TianfuDifficulty.byIndex(difficulty)!=null;}
@@ -271,32 +285,52 @@ public class TianfuViewScreen extends Screen {
         return wizardStep!=TianfuWizardStep.APTITUDE||hasAnchorSelection();
     }
     private boolean canSkipCurrentStep(){return canAdvance()&&wizardStep.canSkip(kongqiao,hasAnchorSelection());}
-    private boolean canJumpToReviewStep(TianfuWizardStep target){
-        return wizardStep==TianfuWizardStep.REVIEW&&!confirmed&&actionable()
-                &&target!=null&&target!=TianfuWizardStep.DIFFICULTY&&target!=TianfuWizardStep.REVIEW;
-    }
     private void goBack(){if(canGoBack())showStep(wizardStep.previous());}
     private void goNext(){
         if(canAdvance()){showStep(wizardStep.next());return;}
         if(wizardStep==TianfuWizardStep.DIFFICULTY&&TianfuDifficulty.byIndex(difficulty)==null)
             notice="请先选择开局难度。";
         else if(wizardStep==TianfuWizardStep.APTITUDE&&!hasAnchorSelection())
-            notice="需满足本体资质、空窍档位、十绝体或历史机缘条件。";
+            notice="需满足本体资质、空窍档位或十绝体条件。";
     }
     private void skipCurrentStep(){if(canSkipCurrentStep())showStep(wizardStep.next());}
+
+    /**
+     * 切到某一页。
+     *
+     * <p><b>1.4.6 起分页自由切换</b>：原来只有停在「确认」页时才能点左侧分页
+     * （{@code canJumpToReviewStep} 要求 {@code wizardStep == REVIEW}），而且
+     * 「未选难度」「未选资质锚点」是**硬拦截**，点过去会被直接 return 掉。
+     * 结果玩家只能一页一页按「下一步」走，想回头看一眼已选项都很别扭。
+     *
+     * <p>现在的口径：
+     * <ul>
+     *   <li>分页只决定「看哪一页」，<b>不是</b>门禁；任意页随时可去。</li>
+     *   <li>前置条件没满足时只给一句 {@code notice} 提示，不拦跳转。</li>
+     *   <li>真正的门禁只剩 {@link #canConfirm()}（已选难度 + 已有资质锚点）——
+     *       也就是「随便看，但没满足条件时按不了确认」。</li>
+     * </ul>
+     */
     private void showStep(TianfuWizardStep target){
         if(target==null||target==wizardStep)return;
-        if(confirmed){wizardStep=TianfuWizardStep.REVIEW;TianfuWizardSession.remember(wizardStep);layout();return;}
+        // 已确认后允许翻阅（各处按只读处理），但不再改写「上次停留页」的记忆。
+        if(confirmed){
+            wizardStep=target;
+            notice="本世已确认，以下只供查阅。";
+            if(target.page()!=null)switchPage(target.page());
+            else{detailOpen=false;reviewScroll=0;reviewTextCache=null;layout();}
+            return;
+        }
         if(!actionable())return;
-        boolean adjacent=wizardStep!=null&&(target==wizardStep.next()||target==wizardStep.previous());
-        if(!adjacent&&!canJumpToReviewStep(target))return;
+        // 前置条件只提示，不拦截。
         if(target!=TianfuWizardStep.DIFFICULTY&&TianfuDifficulty.byIndex(difficulty)==null){
-            notice="请先选择开局难度。";return;
+            notice="提示：还没选开局难度——选完才会发点数，现在可以先看。";
+        }else if(target.ordinal()>TianfuWizardStep.APTITUDE.ordinal()&&!hasAnchorSelection()){
+            notice="提示：资质页还没选空窍档位或十绝体，满足后才能最终确认。";
+        }else{
+            notice="";
         }
-        if(target.ordinal()>TianfuWizardStep.APTITUDE.ordinal()&&!hasAnchorSelection()){
-            notice="需满足本体资质、空窍档位、十绝体或历史机缘条件。";return;
-        }
-        wizardStep=target;TianfuWizardSession.remember(target);notice="";
+        wizardStep=target;TianfuWizardSession.remember(target);
         if(search!=null)search.setFocused(false);
         if(target.page()!=null)switchPage(target.page());
         else{detailOpen=false;reviewScroll=0;reviewTextCache=null;layout();}
@@ -324,7 +358,8 @@ public class TianfuViewScreen extends Screen {
         g.fill(detailBox.x0-1,headerBottom,detailBox.x0,footerTop,DIVIDER);
         for(int i=0;i<nav.size();i++){
             Hit h=nav.get(i);TianfuWizardStep step=TianfuWizardStep.values()[i];
-            boolean chosen=wizardStep==step,jumpable=canJumpToReviewStep(step);
+            // 分页自由切换后，左侧每一页都点得动（已确认时也能翻阅，按只读处理）。
+            boolean chosen=wizardStep==step,jumpable=confirmed||actionable();
             button(g,h,step.label,chosen||jumpable,chosen);
             if(chosen)g.fill(h.x0,h.y0,h.x0+2,h.y1,LINE);
         }
@@ -536,7 +571,8 @@ public class TianfuViewScreen extends Screen {
         if(modal()){if(noHit.contains(x,y)){clearPending();restoreOrigin();buildRows();reviewTextCache=null;}else if(yesHit.contains(x,y))submit();return true;}
         if(closeHit.contains(x,y)){onClose();return true;}
         for(int i=0;i<nav.size();i++)if(nav.get(i).contains(x,y)){
-            TianfuWizardStep target=TianfuWizardStep.values()[i];if(canJumpToReviewStep(target))showStep(target);return true;
+            // 分页自由切换：点哪页去哪页。showStep 内部只给提示、不拦跳转。
+            TianfuWizardStep target=TianfuWizardStep.values()[i];showStep(target);return true;
         }
         if(backHit.contains(x,y)){goBack();return true;}
         if(skipHit.contains(x,y)){skipCurrentStep();return true;}

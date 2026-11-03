@@ -12,20 +12,20 @@ import java.util.Random;
  * 负责。这样算法本身是纯函数，审计脚本可以原样复现。
  *
  * <h2>为什么必须「必含一个资质」</h2>
- * 最终确认的门禁要求至少 1 个 SIJUE 或 JIYUAN（见 {@code TianfuConfirmPayload}）。
+ * 最终确认的门禁要求至少 1 个 SIJUE 或空窍档位（见 {@code TianfuConfirmPayload}）。
  * 随机结果若不含资质，接受后会直接卡死、无法确认 —— 所以这里是硬约束，不是偏好。
  *
  * <h2>两层抽取</h2>
  * <ol>
- *   <li><b>第一层</b>：候选 = {十绝体} ∪ {甲, 乙, 丙, 丁}，每个候选占一个槽位、等概率
+ *   <li><b>第一层</b>：候选 = {十绝体} ∪ {甲, 乙, 丙, 丁空窍档位}，每个候选占一个槽位、等概率
  *       （点数够时即五等分，各 20%）。买不起的候选先剔除再归一化。</li>
  *   <li><b>第二层</b>：第一层抽中「十绝体」这个类别后，再在 11 个十绝体里抽一次（1/11）；
- *       抽中某个机缘档则直接取该档（每档只有一条）。</li>
+ *       抽中某个空窍档位则直接取该档（每档只有一条）。</li>
  * </ol>
  *
  * <h2>为什么十绝体只在 ≥16 点时出现</h2>
  * 十绝体成本 16，而难度最低档只有 8 点。12 / 8 点档根本买不起，
- * 硬要保证「十绝体 + 机缘」会让低难度档永远无解，所以口径是「十绝体或机缘，二者取一」。
+ * 硬要保证「十绝体 + 空窍档位」会让低难度档永远无解，所以口径是「十绝体或空窍档位，二者取一」。
  *
  * <h2>为什么有 64 轮上限</h2>
  * 负成本词条（返还 2 点）会把预算变大，进而又能买下一条 —— 若池子里负词条抽之不尽，
@@ -58,12 +58,13 @@ public final class TianfuRoll {
         boolean hasBody = false;
 
         // ---- ① 第一层抽取：候选 = {十绝体} ∪ {甲, 乙, 丙, 丁}，每个候选一个槽位 ----
-        // 买不起的候选直接剔除、剩下的重新归一化：8 / 12 点档自然只剩机缘档，
+        // 买不起的候选直接剔除、剩下的重新归一化：8 / 12 点档自然只剩可负担的空窍档位，
         // 不会出现「抽到十绝体却买不起」这种需要降级的尴尬。
-        List<TianfuPool.Spec> jiyuanPool = affordable(TianfuPool.jiyuans(), budget);
+        List<TianfuPool.Spec> aptitudePool = affordable(TianfuTalents.specs().stream()
+                .filter(spec -> TianfuTalents.isAptitudeTier(spec.id())).toList(), budget);
         List<TianfuPool.Spec> sijuePool = affordable(TianfuPool.sijues(), budget);
         boolean sijueSlot = !sijuePool.isEmpty();
-        int slots = (sijueSlot ? 1 : 0) + jiyuanPool.size();
+        int slots = (sijueSlot ? 1 : 0) + aptitudePool.size();
         String anchor = null;
         if (slots > 0) {
             int slot = rng.nextInt(slots);
@@ -72,7 +73,7 @@ public final class TianfuRoll {
                 anchor = pick(sijuePool, rng).id();
                 hasBody = true; // 十绝体本身就是体质，后续不再摇凡体
             } else {
-                anchor = jiyuanPool.get(sijueSlot ? slot - 1 : slot).id();
+                anchor = aptitudePool.get(sijueSlot ? slot - 1 : slot).id();
             }
         }
         if (anchor != null) {
@@ -97,6 +98,7 @@ public final class TianfuRoll {
         while (steps++ < MAX_STEPS) {
             List<TianfuPool.Spec> ok = new ArrayList<>();
             for (TianfuPool.Spec s : pool) {
+                if (!TianfuTalents.isAvailable(s.id())) continue;
                 if (out.contains(s.id())) {
                     continue; // 不重复
                 }
@@ -123,11 +125,12 @@ public final class TianfuRoll {
         return sum;
     }
 
-    /** 结果是否含 1 个资质（十绝体或机缘）—— 最终确认的门禁。 */
+    /** 结果是否含 1 个资质（十绝体或空窍档位）—— 最终确认的门禁。 */
     public static boolean hasAnchor(List<String> ids) {
         for (String id : ids) {
             TianfuPool.Spec s = TianfuPool.byId(id);
-            if (s != null && (s.kind() == TianfuPool.Kind.SIJUE || s.kind() == TianfuPool.Kind.JIYUAN)) {
+            if (TianfuTalents.isAptitudeTier(id)
+                    || s != null && (s.kind() == TianfuPool.Kind.SIJUE || s.kind() == TianfuPool.Kind.JIYUAN)) {
                 return true;
             }
         }
@@ -138,12 +141,15 @@ public final class TianfuRoll {
 
     private static int costOf(String id) {
         TianfuPool.Spec s = TianfuPool.byId(id);
-        return s == null ? 0 : s.cost();
+        if (s != null) return s.cost();
+        TianfuTalents.Talent talent = TianfuTalents.byId(id);
+        return talent == null ? 0 : talent.cost();
     }
 
     private static List<TianfuPool.Spec> affordable(List<TianfuPool.Spec> all, int budget) {
         List<TianfuPool.Spec> out = new ArrayList<>();
         for (TianfuPool.Spec s : all) {
+            if (!TianfuTalents.isAvailable(s.id())) continue;
             if (s.cost() < 0 || s.cost() <= budget) {
                 out.add(s);
             }

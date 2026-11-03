@@ -82,10 +82,10 @@ public final class TianfuSlay {
             return;
         }
         boolean slay = isSlay(sp);
-        // 杀神自带「杀怪噬道」；神·吞天噬地（甲等购买）也走本通道，同一套「本体敌对生物」过滤与防刷规则。
+        // 杀怪噬道现在只有杀神走（「神·吞天噬地」已于 1.4.15 删除）。
         // 一律走 TianfuApply.effective：确认前未生效的天赋不该开始累积杀戮值 / 触发噬元。
         var ids = TianfuApply.effective(sp);
-        boolean tuntian = slay || ids.contains("shen_tuntian_shidi");
+        boolean tuntian = slay;
         boolean shiyuan = ids.contains("shiyuan_zhixing");
         if (!slay && !tuntian && !shiyuan) {
             return;
@@ -163,7 +163,7 @@ public final class TianfuSlay {
                 perField = Math.max(0, DEVOUR_DAILY_CAP - devDaily);
             }
             if (perField > 0) {
-                addDevourDaohen(v, perField);
+                addDevourDaohen(sp, v, perField);
                 TianfuData.setDevourProgress(sp, day, devDaily + perField);
             }
         }
@@ -198,12 +198,23 @@ public final class TianfuSlay {
     }
 
     /**
-     * 杀怪噬道（杀神 / 吞天噬地）：给战斗实际读取的 7 路道痕各加 {@code amount}。
+     * 杀怪噬道：把本次击杀的 {@code amount} 道痕写进<b>主修流派</b>那一路。
      *
-     * <p>本体 {@code daohen_zong} 由 KE1 / 冒名实体每 tick 对全部 {@code daohen_*} 字段求和重算，
-     * 直接写 {@code daohen_zong} 会被覆盖，因此必须写具体字段。
+     * <p>主修判定见 {@link TianfuMainDao}：优先读道途的选择，没装道途就取
+     * {@code liupai_*} 熟练度最高的那一路。
+     *
+     * <p>主修未设定（或该流派在本体没有对应 {@code daohen_*} 字段）时，退回
+     * 1.4.14 及以前的行为——7 路均分，避免「什么都没点的新号一点道痕都不给」。
+     *
+     * <p>本体 {@code daohen_zong} 由 KE1 / 冒名实体每 tick 对全部 {@code daohen_*} 字段
+     * 求和重算，直接写 {@code daohen_zong} 会被覆盖，因此必须写具体字段。
      */
-    private static void addDevourDaohen(PlayerVariables v, double amount) {
+    private static void addDevourDaohen(ServerPlayer sp, PlayerVariables v, double amount) {
+        String main = TianfuMainDao.of(sp, v);
+        if (!main.isEmpty() && TianfuDaohen.addDaohen(v, main, amount)) {
+            return;
+        }
+        // 主修未定：退回 7 路均分
         v.dahen_qidao += amount;
         v.dahen_zhoudao += amount;
         v.daohen_jindao += amount;

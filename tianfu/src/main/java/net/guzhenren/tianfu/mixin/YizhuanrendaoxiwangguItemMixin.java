@@ -21,14 +21,13 @@ import net.minecraft.world.level.Level;
  * <p>HEAD 拦截本体 {@code YizhuanrendaoxiwangguItem.use()} 并整体取消本体开窍链
  * （主 procedure、10 tick 延迟链、随机 kongqiao 1–10、本体资质面板 openMenu、档位随机结算），
  * 改由 {@link TianfuOpening#onUseHopeGu} 复刻开窍仪式后保持 kongqiao=0 直接调用本体收尾，
- * 由既有 {@code UikongqiaoguanbiProcedureMixin} 的 TAIL 钩子弹出附属天赋界面。
+ * 由严格适配的 9.8 {@code UikongqiaoquedingProcedureMixin} 收尾钩子弹出附属天赋界面。
  *
- * <p>{@code require = 0} + try-catch：本体升级导致注入点消失时静默放行，
- * 客户端 {@code TianfuClientEvents} 的本体面板拦截仍可兜底。
+ * <p>目标类与方法按本体 9.8 固定描述符注入，并由启动期语义指纹核验；不静默放行不匹配的本体版本。
  */
 @Mixin(value = YizhuanrendaoxiwangguItem.class, remap = false)
 public class YizhuanrendaoxiwangguItemMixin {
-    @Inject(method = "use", at = @At("HEAD"), cancellable = true, require = 0, remap = false)
+    @Inject(method = "use", at = @At("HEAD"), cancellable = true, require = 1, remap = false)
     private void tianfu$openQiao(Level level, Player player, InteractionHand hand,
                                  CallbackInfoReturnable<InteractionResultHolder<ItemStack>> cir) {
         ItemStack stack = player.getItemInHand(hand);
@@ -36,8 +35,11 @@ public class YizhuanrendaoxiwangguItemMixin {
             if (!level.isClientSide() && player instanceof ServerPlayer serverPlayer) {
                 TianfuOpening.onUseHopeGu(serverPlayer, stack, hand);
             }
-        } catch (Throwable t) {
-            TianfuMod.LOGGER.error("[天赋] 希望蛊开窍拦截异常，已静默放行", t);
+        } catch (RuntimeException | LinkageError t) {
+            TianfuMod.LOGGER.error("[天赋] 希望蛊开窍失败，已恢复道具及本体状态", t);
+            player.displayClientMessage(net.minecraft.network.chat.Component.literal("§c[天命] 开窍失败，已恢复希望蛊与玩家数据，请查看服务端日志"), false);
+            cir.setReturnValue(InteractionResultHolder.fail(player.getItemInHand(hand)));
+            return;
         }
         cir.setReturnValue(InteractionResultHolder.success(stack));
     }

@@ -17,6 +17,8 @@ import net.minecraft.nbt.CompoundTag;
 import net.minecraft.nbt.Tag;
 import net.minecraft.world.scores.Objective;
 import net.minecraft.world.scores.ScoreHolder;
+import net.minecraft.advancements.AdvancementHolder;
+import net.minecraft.resources.ResourceLocation;
 import net.guzhenren.tianfu.v2.TianfuSelection;
 import net.guzhenren.tianfu.v2.TianfuV2Store;
 
@@ -36,7 +38,7 @@ public final class TianfuApply {
     /**
      * 过滤掉不认识 / 重复的 id，保持客户端顺序。
      *
-     * <p>注意：这里用 {@link TianfuTalents#byIdIncludingUnavailable} 而不是
+     * <p>注意：词条从不受安装状态过滤的 {@link TianfuTalents#byId} 全表识别，而不是只查
      * {@link TianfuPool#byId} —— 后者只含「当前环境可购买」的条目。若玩家买了
      * 附属联动天赋后又把附属卸载，其 id 会从池子里消失，但 purchased 里仍在、
      * 点数也已经扣了。此时若在这里把它滤掉，就会变成「点数白扣 + 无法撤销」。
@@ -45,7 +47,7 @@ public final class TianfuApply {
     public static Set<String> sanitize(List<String> raw) {
         Set<String> set = new LinkedHashSet<>();
         for (String id : raw) {
-            if (TianfuPool.byId(id) != null || TianfuTalents.byIdIncludingUnavailable(id) != null) {
+            if (TianfuPool.byId(id) != null || TianfuTalents.byId(id) != null) {
                 set.add(id);
             }
         }
@@ -68,23 +70,39 @@ public final class TianfuApply {
     /** 单条目购买（服务端权威）：只落库，效果等最终确认时统一结算。 */
     /** V2 契约：服务端门禁后调用TianfuEconomy.buy，原子拦截补点超24并保存成交快照，失败返回false。未填充时拒绝执行，不写入玩家状态。 */
     public static boolean buy(ServerPlayer player, String id) {
+        return buyReason(player, id) == net.guzhenren.tianfu.v2.TianfuSelection.Rejection.NONE;
+    }
+
+    /**
+     * 与 {@link #buy} 相同，但**返回具体拒绝原因**。
+     *
+     * <p>为什么要这个重载：{@code buy} 只回 boolean，网络包拿到 false 就什么都不做，
+     * 于是「点数不够」「与已选内容互斥」「本世已锁定」在客户端表现完全一样——点了没反应。
+     * 玩家会以为自己选上了（例如点了十绝体却没买成），最后确认后仍是凡体。
+     * 1.4.5 起由 {@code TianfuBuyPayload} 用本方法把原因回显给玩家。
+     */
+    public static net.guzhenren.tianfu.v2.TianfuSelection.Rejection buyReason(
+            ServerPlayer player, String id) {
+        var none = net.guzhenren.tianfu.v2.TianfuSelection.Rejection.NONE;
         if (player == null || id == null || id.isEmpty()) {
-            return false;
+            return net.guzhenren.tianfu.v2.TianfuSelection.Rejection.UNKNOWN_ID;
         }
         if (!TianfuData.isApplied(player) || TianfuData.isConfirmed(player)) {
-            return false;
+            return net.guzhenren.tianfu.v2.TianfuSelection.Rejection.LOCKED;
         }
         net.guzhenren.tianfu.v2.TianfuSelection.Snapshot snapshot =
                 net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
         net.guzhenren.tianfu.v2.TianfuSelection.Result result =
                 net.guzhenren.tianfu.v2.TianfuEconomy.buy(snapshot, id);
         if (!result.ok()) {
-            return false;
+            return result.reason();
         }
         if (!net.guzhenren.tianfu.v2.TianfuV2Store.commit(player,
-                new net.guzhenren.tianfu.v2.TianfuSelection.Change(snapshot.revision(), result.snapshot()))) return false;
+                new net.guzhenren.tianfu.v2.TianfuSelection.Change(snapshot.revision(), result.snapshot()))) {
+            return net.guzhenren.tianfu.v2.TianfuSelection.Rejection.STALE_REVISION;
+        }
         TianfuData.markDeferred(player);
-        return true;
+        return none;
     }
 
     /**
@@ -151,8 +169,9 @@ public final class TianfuApply {
         if (TianfuDifficulty.byIndex(snapshot.difficulty()) == null) return TianfuSelection.Rejection.NO_DIFFICULTY;
         PlayerVariables vars = player.getData(GuzhenrenModVariables.PLAYER_VARIABLES);
         boolean anchor = vars.kongqiao >= 1 && vars.kongqiao <= 10;
-        int bodies = 0, sijues = 0;
+        int bodies = 0, sijues = 0, aptitudeTiers = 0;
         for (String id : snapshot.purchased()) {
+            if (!TianfuTalents.isAvailable(id)) return TianfuSelection.Rejection.UNVERIFIED_EFFECT;
             var spec = TianfuPool.byId(id);
             if (spec != null) {
                 if (spec.kind() == TianfuPool.Kind.BODY) bodies++;
@@ -162,8 +181,11 @@ public final class TianfuApply {
                 return TianfuSelection.Rejection.UNKNOWN_ID;
             }
             anchor |= TianfuTalents.isAptitudeTier(id);
+            if (TianfuTalents.isAptitudeTier(id)) aptitudeTiers++;
         }
-        if (!anchor || bodies > 1 || sijues > 1) return TianfuSelection.Rejection.CONFLICT;
+        // 体质只有本体 tizhi 一个槽位：凡体与十绝体合计最多一个。
+        if (!anchor || bodies + sijues > 1 || aptitudeTiers > 1 || aptitudeTiers > 0 && sijues > 0)
+            return TianfuSelection.Rejection.CONFLICT;
         net.guzhenren.tianfu.v2.VersionAdapter adapter =
                 new net.guzhenren.tianfu.v2.NeoForge1211Adapter();
         TianfuSelection.Rejection checked = adapter.preflight(player, snapshot);
@@ -180,16 +202,23 @@ public final class TianfuApply {
             var info = scoreboard.getPlayerScoreInfo(holder, objective);
             if (info != null) beforeScores.put(objective, info.value());
         }
+        Map<AdvancementHolder, Set<String>> beforeAwards = snapshotNativeAwards(player);
         try {
             applyBaseEffects(player, vars, snapshot, legacy);
             // One-time talents may also change lifespan; validate the actual post-talent balance.
-            checked = adapter.preflight(player, snapshot);
+            checked = adapter.validateSettlement(player, snapshot);
             if (checked != TianfuSelection.Rejection.NONE) {
                 restoreSettlement(player, vars, beforeVars, beforeTag, beforeScores);
+                restoreNativeAwards(player, beforeAwards);
                 return checked;
             }
             adapter.settle(player, snapshot);
             adapter.maintain(player, snapshot);
+            if (!net.guzhenren.tianfu.compat.Guzhenren98Settlement.validLifespan(vars.shouyuan)) {
+                restoreSettlement(player, vars, beforeVars, beforeTag, beforeScores);
+                restoreNativeAwards(player, beforeAwards);
+                return TianfuSelection.Rejection.UNSAFE_LIFESPAN;
+            }
             Set<String> keys = new LinkedHashSet<>(snapshot.originEffectKeys());
             keys.add("settlement_complete");
             TianfuSelection.Snapshot finalState = new TianfuSelection.Snapshot(snapshot.schema(), snapshot.revision() + 1,
@@ -197,6 +226,7 @@ public final class TianfuApply {
                     snapshot.purchased(), snapshot.receipts(), snapshot.negativeGrant(), Set.copyOf(keys));
             if (!TianfuV2Store.commit(player, new TianfuSelection.Change(snapshot.revision(), finalState))) {
                 restoreSettlement(player, vars, beforeVars, beforeTag, beforeScores);
+                restoreNativeAwards(player, beforeAwards);
                 return TianfuSelection.Rejection.STALE_REVISION;
             }
             TianfuData.markSettled(player);
@@ -206,6 +236,7 @@ public final class TianfuApply {
             return TianfuSelection.Rejection.NONE;
         } catch (RuntimeException | LinkageError failure) {
             restoreSettlement(player, vars, beforeVars, beforeTag, beforeScores);
+            restoreNativeAwards(player, beforeAwards);
             TianfuMod.LOGGER.error("[天命] 确认结算失败，已恢复本体字段与天赋账", failure);
             return TianfuSelection.Rejection.UNVERIFIED_EFFECT;
         }
@@ -214,13 +245,21 @@ public final class TianfuApply {
     private static void applyBaseEffects(ServerPlayer player, PlayerVariables vars,
             TianfuSelection.Snapshot snapshot, boolean legacy) {
         Set<String> entries = new LinkedHashSet<>();
+        // Native grade may initialize destiny-dependent fields. Run it before physique/entry bonuses.
+        for (String id : snapshot.purchased()) {
+            var receipt = snapshot.receipts().get(id);
+            boolean alreadyApplied = receipt != null && receipt.legacy()
+                    && (legacy || !TianfuData.isDeferred(player));
+            if (!alreadyApplied && TianfuTalents.isAptitudeTier(id))
+                TianfuTalents.applyOnce(player, vars, Set.of(id));
+        }
         // Apply native physique first, then entry multipliers, origin and finally hard constraints.
         for (String id : snapshot.purchased()) {
             var receipt = snapshot.receipts().get(id);
             boolean alreadyApplied = receipt != null && receipt.legacy()
                     && (legacy || !TianfuData.isDeferred(player));
             var spec = TianfuPool.byId(id);
-            if (alreadyApplied) continue;
+            if (alreadyApplied || TianfuTalents.isAptitudeTier(id)) continue;
             // These definitions also contain legacy FIELD_* display primitives. Running both
             // engines would deduct the scar's 400 lifespan twice; settle only in the adapter.
             if (ADAPTER_HARD_COSTS.contains(id)) continue;
@@ -237,6 +276,30 @@ public final class TianfuApply {
             }
         }
         TianfuEffects.applyOnce(player, vars, entries, 0);
+    }
+
+    private static Map<AdvancementHolder, Set<String>> snapshotNativeAwards(ServerPlayer player) {
+        Map<AdvancementHolder, Set<String>> result = new HashMap<>();
+        for (String id : List.of("chengjiujiadeng", "cchengjiuyideng", "cchengjiubingde",
+                "chengjiudingdeng", "cchengjiushijietianzi")) {
+            var holder = player.server.getAdvancements().get(ResourceLocation.fromNamespaceAndPath("guzhenren", id));
+            if (holder == null) continue;
+            Set<String> completed = new LinkedHashSet<>();
+            for (String criterion : player.getAdvancements().getOrStartProgress(holder).getCompletedCriteria())
+                completed.add(criterion);
+            result.put(holder, completed);
+        }
+        return result;
+    }
+
+    private static void restoreNativeAwards(ServerPlayer player, Map<AdvancementHolder, Set<String>> before) {
+        before.forEach((holder, completed) -> {
+            Set<String> now = new LinkedHashSet<>();
+            for (String criterion : player.getAdvancements().getOrStartProgress(holder).getCompletedCriteria())
+                now.add(criterion);
+            for (String criterion : now) if (!completed.contains(criterion))
+                player.getAdvancements().revoke(holder, criterion);
+        });
     }
 
     private static void restoreSettlement(ServerPlayer player, PlayerVariables vars, CompoundTag beforeVars,

@@ -36,7 +36,7 @@ public record TianfuConfirmPayload() implements CustomPacketPayload {
         return TYPE;
     }
 
-    /** V2 契约：预检出身与硬代价后幂等结算再锁定；确认认可原生资质、已购SIJUE或历史机缘。 */
+    /** V2 契约：预检出身与硬代价后幂等结算再锁定；确认认可原生资质、已购空窍档位或SIJUE。 */
     public static void handle(TianfuConfirmPayload payload, IPayloadContext context) {
         context.enqueueWork(() -> {
             if (!(context.player() instanceof net.minecraft.server.level.ServerPlayer player)) {
@@ -62,8 +62,8 @@ public record TianfuConfirmPayload() implements CustomPacketPayload {
                 String reason = switch (rejection) {
                     case NOT_OPENED -> "请先以希望蛊开窍";
                     case NO_DIFFICULTY -> "请先选择开局难度";
-                    case CONFLICT -> "需要本体资质、十绝体或历史机缘，且选择不能互斥";
-                    case UNSAFE_LIFESPAN -> "寿元不足以承受命烛残尽，请撤销该项后重试";
+                    case CONFLICT -> "需要本体资质、空窍档位或十绝体，且选择不能互斥";
+                    case UNSAFE_LIFESPAN -> "全部天赋结算后的寿元必须大于 0，请调整寿元增益或代价后重试";
                     case STALE_REVISION -> "选择已更新，请核对后重试";
                     case LOCKED -> "本世已锁定";
                     default -> "存在无法安全兑现的选择，未锁定，请检查已购项目";

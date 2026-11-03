@@ -2,6 +2,8 @@ package net.guzhenren.tianfu;
 
 import net.guzhenren.network.GuzhenrenModVariables.PlayerVariables;
 import net.guzhenren.procedures.TianziliuchengProcedure;
+import net.guzhenren.procedures.UikongqiaoquedingProcedure;
+import net.guzhenren.tianfu.compat.Guzhenren98Settlement;
 import net.minecraft.network.chat.Component;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.util.Mth;
@@ -14,16 +16,58 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType;
 
 /**
- * 本体天赋入池的原生写入：复刻 {@code UikongqiaoguanbiProcedure} 中甲乙丙丁机缘与十绝体的
- * 授予分支（同一随机区间、同一概率、同一字段），让本体 KE1（真元反推档位）与 KE2（十绝体
+ * 本体天赋入池的原生写入：甲乙丙丁资质通过 9.8 {@code UikongqiaoquedingProcedure} 结算；十绝体按该过程
+ * {@code kongqiao == 3} 分支逐号写入（同一随机区间、同一概率、同一字段），让本体 KE1（真元反推档位）与 KE2（十绝体
  * 运行时效果）原生生效，附属不自建一套效果体系。
  */
 public final class TianfuNative {
     private TianfuNative() {
     }
 
+    /** Run native 9.8 grade settlement, including its fortune/destiny side effects. */
+    public static void applyAptitudeTier(ServerPlayer player, PlayerVariables v, int aptitude) {
+        int finalAptitude = Guzhenren98Settlement.finalAptitude(aptitude);
+        v.kongqiao = aptitude;
+        TianfuOpening.runNativeSettlement(player,
+                () -> UikongqiaoquedingProcedure.execute(player.level(), player));
+        // The 9.8 KE1 conversion is deterministic; publish the same final grade immediately.
+        v.kongqiao = finalAptitude;
+        initializeCurrentYuan(v);
+        v.markSyncDirty();
+    }
+
+    private static void initializeCurrentYuan(PlayerVariables v) {
+        if (!Double.isFinite(v.zuida_zhenyuan) || v.zuida_zhenyuan <= 0.0)
+            throw new IllegalStateException("本体 9.8 未生成有效的真元上限");
+        if (!Double.isFinite(v.zhenyuan) || v.zhenyuan <= 0.0) v.zhenyuan = v.zuida_zhenyuan;
+        else v.zhenyuan = Math.min(v.zhenyuan, v.zuida_zhenyuan);
+    }
+
     /**
-     * 机缘（甲乙丙丁）：按档位写真元上限 + 气运 + 命格 roll，与本体开窍完全同款。
+     * Write the same maximum-yuan interval used by the native aperture settlement for this aptitude.
+     *
+     * <p><b>注意</b>：这里只写 {@code zuida_zhenyuan}，<b>不</b>写 {@code kongqiao} 的最终值。
+     * 本体 {@code KE1Procedure} 随后会按真元上限反推 kongqiao（实测阈值）：
+     * 800–999 → 2（甲）／600–799 → 1（乙）／400–599 → 5（丙）／200–399 → 不匹配、保持原值（丁写 8）。
+     * 反推前有一段 {@code if (kongqiao != 3.0)} 守卫，所以十绝体（kongqiao=3）不会被改写。
+     * 也就是说「资质档位」的最终 kongqiao 由区间决定，调用方写的初值只是过渡值。
+     */
+    static void applyAptitudeTier(PlayerVariables v, int aptitude) {
+        v.zuida_zhenyuan = switch (aptitude) {
+            case 2 -> roll(800, 990); // 甲等
+            case 4 -> roll(600, 790); // 乙等
+            case 6 -> roll(400, 590); // 丙等
+            case 8 -> roll(200, 390); // 丁等
+            default -> throw new IllegalArgumentException("不支持的空窍资质档位：" + aptitude);
+        };
+        if (v.zhenyuan <= 0.0) {
+            v.zhenyuan = v.zuida_zhenyuan;
+        }
+        v.markSyncDirty();
+    }
+
+    /**
+     * 旧存档兼容：保留旧机缘记录的历史执行代码，但不再向新天赋页或随机候选开放。
      * kongqiao 直接写 KE1 稳定值（甲 2 / 乙 1 / 丙 5 / 丁 8），避免反推口径不一致。
      */
     public static void applyJiyuan(ServerPlayer player, PlayerVariables v, String id) {
@@ -139,10 +183,18 @@ public final class TianfuNative {
             default -> {
             }
         }
+        if (tizhi >= 1 && tizhi <= 10) {
+            // Every native 9.8 selected-physique branch resets this same objective.
+            setScore(player, "压力", 0);
+            var holder = player.server.getAdvancements().get(
+                    net.minecraft.resources.ResourceLocation.parse("guzhenren:cchengjiushijietianzi"));
+            if (holder != null) {
+                var progress = player.getAdvancements().getOrStartProgress(holder);
+                for (String criterion : progress.getRemainingCriteria()) player.getAdvancements().award(holder, criterion);
+            }
+        }
+        initializeCurrentYuan(v);
         v.markSyncDirty();
-        player.displayClientMessage(Component.literal(tizhi == 54
-                ? "§c[天赋] 杀神加身：真元上限 1000，杀戮成长与杀怪噬道生效"
-                : "§c[天赋] 十绝体加身：真元上限 1000，本体体质效果原生生效"), false);
     }
 
     /** 本体同款命格 roll：{@code p} 概率命格 −1，否则走天资流畅（命格 1–13 及其附带奖励）。 */

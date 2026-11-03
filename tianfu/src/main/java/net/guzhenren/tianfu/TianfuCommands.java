@@ -53,9 +53,13 @@ public final class TianfuCommands {
     /**
      * 直接打开天赋界面，并把诊断状态打到聊天栏。
      *
-     * <p>诊断项：开窍标记 / 空窍 / 是否已结算 / 难度 / 点数。
+     * <p>诊断项：开窍标记 / 空窍 / **体质 tizhi** / 已结算 / 难度 / 点数 / **已购列表**。
      * 「按 K 没反应」的反馈里，这几项能直接分开四类原因：
      * 未开窍、开窍了但没结算、结算了但没选难度、以及界面侧问题。
+     *
+     * <p><b>1.4.5</b> 补了 {@code tizhi} 与已购列表：只报「空窍 5」不够用——
+     * 「买了十绝体却还是凡体」这类反馈必须看到 {@code tizhi}（0=凡人，1–10=十绝体，
+     * 17–53=凡体，54=杀神）和 {@code purchased} 里到底有没有 {@code sijue_N}。
      */
     private static int open(CommandContext<CommandSourceStack> ctx)
             throws CommandSyntaxException {
@@ -65,15 +69,24 @@ public final class TianfuCommands {
         boolean applied = TianfuData.isApplied(player);
         int difficulty = TianfuData.difficulty(player);
         int points = TianfuData.points(player);
-        double kongqiao = player.getData(
-                net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES).kongqiao;
+        var pv = player.getData(
+                net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES);
+        double kongqiao = pv.kongqiao;
+        int tizhi = (int) Math.round(pv.tizhi);
 
         player.displayClientMessage(Component.literal(
                 "§6[天赋] §7诊断 §8| §7开窍标记(kaiqiao) §f" + kaiqiao
                         + " §8| §7空窍 §f" + String.format("%.0f", kongqiao)
+                        + " §8| §7体质tizhi §f" + tizhi + "§8(" + physiqueName(tizhi) + "§8)"
                         + " §8| §7已结算 §f" + applied
                         + " §8| §7难度 §f" + difficulty
                         + " §8| §7点数 §f" + points), false);
+
+        var snapshot = net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
+        player.displayClientMessage(Component.literal(
+                "§6[天赋] §7已购 §8(" + snapshot.purchased().size() + ")§f "
+                        + (snapshot.purchased().isEmpty() ? "（空）"
+                                : String.join("§7, §f", snapshot.purchased()))), false);
 
         if (kaiqiao == 0) {
             player.displayClientMessage(Component.literal(
@@ -88,6 +101,15 @@ public final class TianfuCommands {
                 "§b[天赋] 已请求打开天赋界面。若这里能开、按 K 却不行，"
                         + "说明是客户端按键层问题（键位冲突或监听未挂）。"), false);
         return 1;
+    }
+
+    /** tizhi 数值 → 人话（0 凡人 / 1–10 十绝体 / 17–53 凡体 / 54 杀神）。 */
+    private static String physiqueName(int tizhi) {
+        if (tizhi == 0) return "凡人";
+        if (tizhi == 54) return "杀神";
+        if (tizhi >= 1 && tizhi <= 10) return "十绝体";
+        if (tizhi >= 17 && tizhi <= 53) return "凡体";
+        return "未知";
     }
 
     private static int set(CommandContext<CommandSourceStack> ctx, boolean on)

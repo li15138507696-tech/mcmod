@@ -90,6 +90,11 @@ public final class TianfuAttributes {
             }
             return;
         }
+        // Native/addon updates can remove our modifier, so still inspect the live instance.
+        // An unchanged modifier does not need replacing or another attribute dirty notification.
+        if (existing != null && existing.amount() == amount && existing.operation() == operation) {
+            return;
+        }
         AttributeModifier modifier = new AttributeModifier(id, amount, operation);
         if (existing == null) {
             instance.addTransientModifier(modifier);

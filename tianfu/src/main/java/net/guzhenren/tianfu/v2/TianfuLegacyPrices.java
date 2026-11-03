@@ -150,7 +150,6 @@ public final class TianfuLegacyPrices {
             Map.entry("wanfa_jietong", 16),
             Map.entry("shen_tianji_suan", 12),
             Map.entry("shen_bumie_jinshen", 12),
-            Map.entry("shen_tuntian_shidi", 12),
             Map.entry("suhui", 5),
             Map.entry("shazhao_tiancheng", 3),
             Map.entry("shiyuan_zhixing", 3),

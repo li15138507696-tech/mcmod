@@ -4,13 +4,13 @@ license = "All Rights Reserved"
 
 [[mods]]
 modId = "tianfu"
-version = "1.4.1"
+version = "1.4.15"
 displayName = "蛊真人天命"
 description = '''
-蛊真人附属「天命」：以希望蛊开窍后，按 K 打开墨金命格录。
+蛊真人附属「天命」：严格适配蛊真人本体 9.8，以希望蛊开窍后，按 K 打开墨金命格录。
 七页整理难度、出身、资质、流派、体质、心智与气运，可搜索、查阅完整效果和代价。
 自由点选择与随机候选共用预算；最终确认后结算并锁定本世命格。
-旧机缘仅保留历史记录，本体资质只读；无本体资质时须选择十绝体才可最终确认。
+旧机缘仅保留存档兼容；可选甲乙丙丁空窍或十绝体，最终确认后按 9.8 原生机制结算。
 '''
 authors = "tianfu"
 
@@ -24,14 +24,14 @@ side = "BOTH"
 [[dependencies.tianfu]]
 modId = "minecraft"
 type = "required"
-versionRange = "[1.21.1,1.22)"
+versionRange = "[1.21.1]"
 ordering = "NONE"
 side = "BOTH"
 
 [[dependencies.tianfu]]
 modId = "guzhenren"
 type = "required"
-versionRange = "[0.1,)"
+versionRange = "[0.1]"
 ordering = "AFTER"
 side = "BOTH"
 

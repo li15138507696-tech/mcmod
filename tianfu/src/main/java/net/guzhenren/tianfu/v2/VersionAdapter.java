@@ -12,6 +12,10 @@ public interface VersionAdapter {
      * @return 可安全完整兑现才为 NONE；未确认 API 返回 UNVERIFIED_EFFECT
      */
     TianfuSelection.Rejection preflight(ServerPlayer player, TianfuSelection.Snapshot state);
+    /** Validate the actual post-talent balance, before applying the adapter's hard costs. */
+    default TianfuSelection.Rejection validateSettlement(ServerPlayer player, TianfuSelection.Snapshot state) {
+        return TianfuSelection.Rejection.NONE;
+    }
     /**
      * 确认时一次结算出身与硬代价，先原生体质/机缘再出身再硬约束。
      * @param player 服务端非 null 玩家

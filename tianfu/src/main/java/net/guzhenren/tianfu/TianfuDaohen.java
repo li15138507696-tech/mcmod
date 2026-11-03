@@ -81,6 +81,46 @@ public final class TianfuDaohen {
         }
     }
 
+    /**
+     * 只加道痕（不动熟练度），按流派键写入对应的 {@code daohen_*} 字段。
+     *
+     * <p>供杀神「按主修流派噬道」使用（见 {@link TianfuSlay}）：
+     * 玩家在主修流派上击杀怪物时，道痕只进那一路，而不是像以前那样固定 7 路均分。
+     *
+     * <p>键集合与 {@link TianfuMainDao#KEYS} 一致（15 个，本体 {@code daohen_*} 与
+     * {@code liupai_*} 两侧字段都存在）。命中返回 {@code true}；未知键返回 {@code false}，
+     * 由调用方决定退回策略。
+     *
+     * <p>注意本体字段名的历史坑：{@code qidao} / {@code zhidao} / {@code zhoudao} 三个是
+     * {@code dahen_*}（少一个 o），不是 {@code daohen_*}——这里沿用 {@link #write} 的写法。
+     */
+    public static boolean addDaohen(PlayerVariables v, String key, double amount) {
+        switch (key) {
+            case "jiandao" -> v.daohen_jiandao += amount;
+            case "jindao" -> v.daohen_jindao += amount;
+            case "shuidao" -> v.daohen_shuidao += amount;
+            case "xuedao" -> v.daohen_xuedao += amount;
+            case "lidao" -> v.daohen_lidao += amount;
+            case "mudao" -> v.daohen_mudao += amount;
+            case "yudao" -> v.daohen_yudao += amount;
+            case "fengdao" -> v.daohen_fengdao += amount;
+            case "bingdao" -> v.daohen_bingdao += amount;
+            case "jindao2" -> v.daohen_jindao2 += amount;
+            case "hundao" -> v.daohen_hundao += amount;
+            case "leidao" -> v.daohen_leidao += amount;
+            case "yandao" -> v.daohen_yandao += amount;
+            case "lvdao" -> v.daohen_lvdao += amount;
+            case "tudao" -> v.daohen_tudao += amount;
+            case "qidao" -> v.dahen_qidao += amount;      // 本体字段少一个 o
+            case "zhidao" -> v.dahen_zhidao += amount;
+            case "zhoudao" -> v.dahen_zhoudao += amount;
+            default -> {
+                return false;
+            }
+        }
+        return true;
+    }
+
     /** write 的反向回滚（撤销凡体时调用，成对减 DAOHEN/LIUPAI_EQUIVALENT）。 */
     public static void revoke(PlayerVariables v, String bodyId) {
         switch (bodyId) {

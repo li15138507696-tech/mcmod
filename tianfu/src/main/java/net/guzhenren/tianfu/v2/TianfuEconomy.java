@@ -41,7 +41,8 @@ public final class TianfuEconomy {
 
     /** 已购但当前不可用（附属未装）的条目可以撤销，但不能新购。 */
     private static boolean availableForPurchase(String id) {
-        return TianfuTalents.byId(id) != null || TianfuPool.byId(id) != null;
+        return TianfuTalents.isAvailable(id)
+                && (TianfuTalents.byId(id) != null || TianfuPool.byId(id) != null);
     }
 
     private static TianfuSelection.Result fail(TianfuSelection.Snapshot state, TianfuSelection.Rejection reason) {
@@ -55,6 +56,11 @@ public final class TianfuEconomy {
     private static boolean hasSijue(List<String> ids) {
         return ids.stream().map(TianfuPool::byId)
                 .anyMatch(spec -> spec != null && spec.kind() == TianfuPool.Kind.SIJUE);
+    }
+
+    /** 凡体与十绝体共用同一个「体质」槽位（本体 tizhi 只有一个）。 */
+    private static boolean isPhysique(TianfuPool.Kind kind) {
+        return kind == TianfuPool.Kind.BODY || kind == TianfuPool.Kind.SIJUE;
     }
 
     private static TianfuSelection.Result ok(TianfuSelection.Snapshot state, int points, int grant,
@@ -108,7 +114,7 @@ public final class TianfuEconomy {
                     : TianfuSelection.Rejection.UNKNOWN_ID);
         }
         if (!availableForPurchase(id)) {
-            return fail(state, TianfuSelection.Rejection.UNKNOWN_ID);
+            return fail(state, TianfuSelection.Rejection.UNVERIFIED_EFFECT);
         }
         int cost = costBoxed.intValue();
 
@@ -131,11 +137,15 @@ public final class TianfuEconomy {
             return fail(state, TianfuSelection.Rejection.CONFLICT);
         }
 
-        // 体质 / 凡体：同 kind 只允许一个。
-        if (spec != null && (spec.kind() == TianfuPool.Kind.SIJUE || spec.kind() == TianfuPool.Kind.BODY)) {
+        // 体质 / 凡体：**凡体与十绝体共用同一个「体质」槽位**，合计只允许一个。
+        // 原实现按 `other.kind() == spec.kind()` 去重，等于把凡体和十绝体当成两个槽位：
+        // 玩家可以各买一个，结算时按 purchased 顺序互相覆盖 tizhi
+        // （后写的赢），于是「买了十绝体却是凡体」。TianfuPool 的类注释早就写明
+        // 「体质（凡体/十绝体/杀神）限购一个」，这里补齐。
+        if (spec != null && isPhysique(spec.kind())) {
             for (String owned : state.purchased()) {
                 TianfuPool.Spec other = TianfuPool.byId(owned);
-                if (other != null && other.kind() == spec.kind()) {
+                if (other != null && isPhysique(other.kind())) {
                     return fail(state, TianfuSelection.Rejection.CONFLICT);
                 }
             }
