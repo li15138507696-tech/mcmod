@@ -48,7 +48,7 @@ public class TianfuViewScreen extends Screen {
     private List<String> purchased=List.of(),pending=List.of();
     private int kongqiao,points,difficulty,rolls,detailScroll,detailMax,modalScroll,modalMax;
     private int left,right,top,bottom,listLeft,listRight,maxScroll,waitTicks,categoryScrollMax;
-    private boolean confirmed,wide,detailOpen,ownedOnly,dragging,debug,loadingSearch;
+    private boolean confirmed,wide,detailOpen,ownedOnly,dragging,debug,loadingSearch,closeDenied;
     private double mx,my;
     private String region="",background="",selectedId="",action,pendingId="",message="",notice="";
     private long pendingRevision=-1;
@@ -276,6 +276,24 @@ public class TianfuViewScreen extends Screen {
             ||wizardStep==TianfuWizardStep.PHYSIQUE||wizardStep==TianfuWizardStep.NEGATIVE
             ||wizardStep==TianfuWizardStep.MIND||wizardStep==TianfuWizardStep.QIYUN;}
     private boolean canConfirm(){return wizardStep==TianfuWizardStep.REVIEW&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&hasAnchorSelection();}
+    /**
+     * 天命尚未结清时是否拦截关界面（1.4.16 起）。
+     *
+     * <p>口径只拦「已经能结算、却还没结算」，四种情况放行，避免把人锁死在界面里：
+     * <ul>
+     *   <li>已确认（{@code confirmed}）——本世已结算，只供查阅。</li>
+     *   <li>还没收到服务端状态（{@code snapshot == null}）——不能因为网络抖动锁死。</li>
+     *   <li>还没选难度——等于还没入场，关掉不损失任何选择。</li>
+     *   <li>难度已选但缺少锚点（无空窍、无资质档、无十绝体/机缘）——此时
+     *       {@link #canConfirm()} 恒为 false，再拦就是永久锁死。</li>
+     * </ul>
+     * 其余情况（难度已选 + 锚点齐 + 未确认）一律拦住，逼玩家走完复核并最终确认。
+     */
+    private boolean closeBlocked(){
+        if(confirmed||snapshot==null)return false;
+        if(TianfuDifficulty.byIndex(difficulty)==null)return false;
+        return hasAnchorSelection();
+    }
     private boolean canRoll(){return isTalentSelectionStep()&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&rolls<TianfuRoll.MAX_ROLLS;}
     private boolean canAccept(){return isTalentSelectionStep()&&actionable()&&!pending.isEmpty()&&TianfuDifficulty.byIndex(difficulty)!=null;}
     private boolean canGoBack(){return wizardStep!=null&&wizardStep!=TianfuWizardStep.DIFFICULTY&&!confirmed&&actionable();}
@@ -352,7 +370,7 @@ public class TianfuViewScreen extends Screen {
         int subtitleX=Math.min(left+100,right-40);
         g.drawString(font,fit("所见未必为真，所得未必为福",right-subtitleX-40),subtitleX,frameTop+10,MUTED,false);
         g.drawString(font,fit("见天地之变",right-subtitleX-40),subtitleX,frameTop+26,META,false);
-        button(g,closeHit,"×",true,false);
+        button(g,closeHit,"×",!closeBlocked(),false);
         g.fill(left+1,headerBottom,right-1,headerBottom+1,DIVIDER);
         g.fill(navRight,headerBottom,navRight+1,footerTop,DIVIDER);
         g.fill(detailBox.x0-1,headerBottom,detailBox.x0,footerTop,DIVIDER);
@@ -439,8 +457,9 @@ public class TianfuViewScreen extends Screen {
     private void renderReviewActions(GuiGraphics g){
         scaledTitle(g,"结算检查",detailBody.x0,detailBox.y0+12,detailBody.w(),LIGHT);
         String status=confirmed?"本世已确认，只供查阅":snapshot==null?"等待服务端同步":
-                !hasAnchorSelection()?"尚缺结算根基":TianfuDifficulty.byIndex(difficulty)==null?"尚未选择难度":"条件已满足，可提交复核";
-        g.drawString(font,fit(status,detailBody.w()),detailBody.x0,detailBox.y0+42,canConfirm()?META:RED,false);
+                !hasAnchorSelection()?"尚缺结算根基":TianfuDifficulty.byIndex(difficulty)==null?"尚未选择难度":
+                closeDenied&&!notice.isEmpty()?notice:"条件已满足，可提交复核";
+        g.drawString(font,fit(status,detailBody.w()),detailBody.x0,detailBox.y0+42,canConfirm()&&!closeDenied?META:RED,false);
         g.drawString(font,fit("自由点 "+points+" · 已摇 "+rolls+"/"+TianfuRoll.MAX_ROLLS,detailBody.w()),detailBody.x0,detailBox.y0+58,MUTED,false);
         if(!pending.isEmpty())g.drawString(font,fit("仍有未接受候选，不计入结算",detailBody.w()),detailBody.x0,detailBox.y0+74,MUTED,false);
         if(!confirmed){
@@ -616,7 +635,22 @@ public class TianfuViewScreen extends Screen {
     }
     @Override public boolean charTyped(char character,int mods){return !modal()&&wizardStep!=TianfuWizardStep.REVIEW&&search!=null&&search.visible&&search.isFocused()?search.charTyped(character,mods):super.charTyped(character,mods);}
     @Override public boolean isPauseScreen(){return false;}
-    @Override public void onClose(){clearPending();super.onClose();}
+    @Override public void onClose(){
+        // 1.4.16：Esc、右上角关闭按钮、键盘关屏都汇到这里，未结清就不放行。
+        if(closeBlocked()){
+            if(wizardStep!=TianfuWizardStep.REVIEW){
+                wizardStep=TianfuWizardStep.REVIEW;
+                if(TianfuWizardStep.REVIEW.page()!=null)page=TianfuWizardStep.REVIEW.page();
+                TianfuWizardSession.remember(wizardStep);
+                reviewTextCache=null;buildRows();
+            }
+            notice="天命未落定：请逐项复核并「最终确认」，此卷方可合上。";
+            closeDenied=true;
+            layout();
+            return;
+        }
+        clearPending();super.onClose();
+    }
     private void button(GuiGraphics g,Hit h,String text,boolean active,boolean chosen){
         g.fill(h.x0,h.y0,h.x1,h.y1,chosen?SELECTED:active&&h.contains(mx,my)?HOVER:PANEL);
         frame(g,h,chosen||active&&(h==detailAction||h==revokeHit||h==closeHit)?LINE:BORDER);
