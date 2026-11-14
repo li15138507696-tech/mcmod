@@ -48,6 +48,25 @@ public final class HotPathRegression {
                         "catalog aggregation differs: " + probe.op()); checks++;
             }
         }
+        // 出身：必须按 origin:<id> 注册成天赋条目，效果与表一致，且不可购买（避免白拿点数）。
+        var backgrounds = net.guzhenren.tianfu.v2.TianfuOriginTable.BACKGROUNDS;
+        require(backgrounds.size() >= 10, "origin roster too small"); checks++;
+        Set<String> originIds = new LinkedHashSet<>();
+        for (var background : backgrounds) {
+            String id = TianfuTalents.ORIGIN_PREFIX + background.id();
+            require(originIds.add(id), "duplicate origin id: " + id); checks++;
+            var registered = TianfuTalents.byId(id);
+            require(registered != null, "origin not registered: " + id); checks++;
+            require(registered.fx().equals(background.fx()) && registered.cost() == background.cost(),
+                    "origin registration differs: " + id); checks++;
+            require(!background.desc().isEmpty(), "origin desc empty: " + id); checks++;
+            require(TianfuPool.byId(id) == null, "origin must not be purchasable: " + id); checks++;
+        }
+        require(Double.compare(TianfuTalents.critChance(Set.of("origin:hunter")), 0.06) == 0,
+                "origin fx does not reach aggregation"); checks++;
+        require(Double.compare(TianfuTalents.liangu(Set.of("unknown_origin")), 0.0) == 0,
+                "unknown origin must contribute nothing"); checks++;
+
         Set<String> workload = new LinkedHashSet<>();
         for (var talent : talents) {
             if (talent.fx().stream().anyMatch(fx -> PROBES.stream().anyMatch(p -> p.op() == fx.op()))) workload.add(talent.id());

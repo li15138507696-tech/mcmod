@@ -114,6 +114,10 @@ dependencies {
     compileOnly files(project.findProperty('tianfu.baseJar') ?: '../_crash3/basever/guzhenren-9.8.jar')
     // Veil：可选依赖，仅编译期；运行期用 ModList 软检测。
     compileOnly files('../libs/veil-neoforge-1.21.1-4.4.1.jar')
+    // 测试运行期也要能链接 MC 与本体：纯 JVM 断言不许启动服务端，但必须有类。
+    testImplementation files(coreJars)
+    testImplementation files(runtimeClasspath)
+    testImplementation files(project.findProperty('tianfu.baseJar') ?: '../_crash3/basever/guzhenren-9.8.jar')
 }
 
 tasks.withType(JavaCompile).configureEach {

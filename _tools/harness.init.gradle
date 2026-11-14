@@ -1,0 +1,9 @@
+// 一次性：在测试运行时类路径上跑净 JVM 断言（不启动服务端）。
+allprojects {
+    tasks.register('runHarness', JavaExec) {
+        classpath = sourceSets.test.runtimeClasspath
+        mainClass = 'net.guzhenren.tianfu.HotPathRegression'
+        executable = 'C:/Users/ADMIN/.jdks/temurin-21/bin/java.exe'
+        standardOutput = System.out
+    }
+}
