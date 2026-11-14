@@ -427,9 +427,23 @@ public final class TianfuTalents {
 
     private static final Map<String, Talent> BY_ID = new LinkedHashMap<>();
 
+    /**
+     * 出身条目的 id 前缀。出身按「一条天赋」注册进 {@link #BY_ID}，
+     * 于是 sum / attributes / applyOnce 三条通道自动生效，适配层不必为每个出身另写分支。
+     * 前缀保证它不会与可购买词条 id 撞车，也不会被写进购买账本。
+     */
+    public static final String ORIGIN_PREFIX = "origin:";
+
     static {
         for (Talent talent : ALL) {
             BY_ID.put(talent.id(), talent);
+        }
+        // 出身注册：只登记效果，不参与价格与购买（经济层只看 purchased）。
+        for (net.guzhenren.tianfu.v2.TianfuOriginTable.Background background
+                : net.guzhenren.tianfu.v2.TianfuOriginTable.BACKGROUNDS) {
+            String id = ORIGIN_PREFIX + background.id();
+            BY_ID.put(id, new Talent(id, background.name(), "出身", background.cost(),
+                    background.desc(), background.fx()));
         }
     }
 

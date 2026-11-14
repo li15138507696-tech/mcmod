@@ -64,7 +64,26 @@ public final class TianfuApply {
         if (!TianfuData.isConfirmed(player)) {
             return Set.of();
         }
-        return sanitize(TianfuData.purchased(player));
+        Set<String> ids = new LinkedHashSet<>(sanitize(TianfuData.purchased(player)));
+        // 出身按 origin:<id> 参与结算：它不在购买账本里，只在生效集合里。
+        String background = originBackground(player);
+        if (!background.isEmpty()) {
+            ids.add(TianfuTalents.ORIGIN_PREFIX + background);
+        }
+        return ids;
+    }
+
+    /** 已确认出身的类型 id；读 NBT 键，不碰 PlayerVariables，未知一律空串。 */
+    private static String originBackground(Player player) {
+        CompoundTag data = player.getPersistentData();
+        if (!data.contains(TianfuData.ROOT, Tag.TAG_COMPOUND)) {
+            return "";
+        }
+        CompoundTag root = data.getCompound(TianfuData.ROOT);
+        if (!root.contains(TianfuV2Store.ORIGIN_BACKGROUND, Tag.TAG_STRING)) {
+            return "";
+        }
+        return root.getString(TianfuV2Store.ORIGIN_BACKGROUND);
     }
 
     /** 单条目购买（服务端权威）：只落库，效果等最终确认时统一结算。 */

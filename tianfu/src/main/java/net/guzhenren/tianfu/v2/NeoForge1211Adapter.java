@@ -5,10 +5,12 @@ import java.lang.reflect.Field;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import net.guzhenren.network.GuzhenrenModVariables;
 import net.guzhenren.network.GuzhenrenModVariables.PlayerVariables;
 import net.guzhenren.tianfu.TianfuData;
+import net.guzhenren.tianfu.TianfuTalents;
 import net.guzhenren.tianfu.compat.Guzhenren98Settlement;
 import net.minecraft.server.level.ServerPlayer;
 
@@ -147,6 +149,11 @@ public final class NeoForge1211Adapter implements VersionAdapter {
             TianfuOriginTable.Background b = background(origin.backgroundId());
             if (b != null && b.yuanshiBonus() != 0) {
                 add(v, "yuanshishuliang", v.yuanshishuliang * b.yuanshiBonus());
+            }
+            // 3b) 出身自带的一次性原语（道痕 / 上限类）：走天赋同一条 applyOnce，不在此另写分支。
+            if (b != null && !b.fx().isEmpty()) {
+                TianfuTalents.applyOnce(player, v,
+                        Set.of(TianfuTalents.ORIGIN_PREFIX + b.id()));
             }
         }
 
