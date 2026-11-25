@@ -21,9 +21,10 @@ import net.minecraft.world.level.Level;
  * <p>HEAD 拦截本体 {@code YizhuanrendaoxiwangguItem.use()} 并整体取消本体开窍链
  * （主 procedure、10 tick 延迟链、随机 kongqiao 1–10、本体资质面板 openMenu、档位随机结算），
  * 改由 {@link TianfuOpening#onUseHopeGu} 复刻开窍仪式后保持 kongqiao=0 直接调用本体收尾，
- * 由严格适配的 9.8 {@code UikongqiaoquedingProcedureMixin} 收尾钩子弹出附属天赋界面。
+ * 由严格适配的 9.8 / 10.x {@code UikongqiaoquedingProcedureMixin} 收尾钩子弹出附属天赋界面。
  *
- * <p>目标类与方法按本体 9.8 固定描述符注入，并由启动期语义指纹核验；不静默放行不匹配的本体版本。
+ * <p>目标类与方法在 9.8 与 10.4/10.20 中描述符一致，并由启动期语义指纹核验；
+ * 不静默放行不匹配的本体版本。
  */
 @Mixin(value = YizhuanrendaoxiwangguItem.class, remap = false)
 public class YizhuanrendaoxiwangguItemMixin {

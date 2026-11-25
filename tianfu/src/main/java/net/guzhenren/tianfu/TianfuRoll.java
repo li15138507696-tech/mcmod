@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
+import net.guzhenren.tianfu.v2.TianfuSelection;
+
 /**
  * 「命运由天」随机天赋生成器。
  *
@@ -102,8 +104,15 @@ public final class TianfuRoll {
                 if (out.contains(s.id())) {
                     continue; // 不重复
                 }
-                if (s.cost() < 0 || s.cost() <= budget) {
-                    ok.add(s); // 负成本永远买得起（会返还点数）
+                if (s.cost() < 0) {
+                    // 1.4.18：负成本不是「永远买得起」。必须守住补点上限，否则整批会被
+                    // acceptRoll 整批拒绝，玩家白耗一次摇号（本方法目前无调用方，
+                    // 活的随机路径是 TianfuEconomy.planRoll，这里同步修正防复活成地雷）。
+                    if (negativeGrant(out) + (-s.cost()) <= TianfuSelection.NEGATIVE_CAP) {
+                        ok.add(s);
+                    }
+                } else if (s.cost() <= budget) {
+                    ok.add(s);
                 }
             }
             if (ok.isEmpty()) {
@@ -114,6 +123,18 @@ public final class TianfuRoll {
             budget -= s.cost();
         }
         return out;
+    }
+
+    /** 一组条目已占用的负面补点。 */
+    private static int negativeGrant(List<String> ids) {
+        int grant = 0;
+        for (String id : ids) {
+            int cost = costOf(id);
+            if (cost < 0) {
+                grant += -cost;
+            }
+        }
+        return grant;
     }
 
     /** 净成本（可能小于发放点数：无任何可购项时会剩点）。 */

@@ -64,24 +64,25 @@ public final class TianfuPool {
             entry("wanfa_jietong", "万法皆通", "极", 16, "所有流派熟练度获取速度 ×3（各流派权重增长 ×3）"),
             entry("shen_tianji_suan", "神·天机神算", GOD_QUALITY, 12, "暴击率 +50%、暴击伤害 +240%、闪避 +24%"),
             entry("shen_bumie_jinshen", "神·不灭金身", GOD_QUALITY, 12, "生命上限 +100%、受击减伤 +20%、每秒回复 5% 生命"),
-            entry("suhui", "宿慧", "天", 5, "每转数提供额外修炼基数与道痕获取"),
-            entry("shazhao_tiancheng", "杀招天成", "地", 3, "杀招成功率 +5%、10 槽磨损 −1"),
-            entry("shiyuan_zhixing", "噬元之性", "地", 3, "击杀灵体回复真元/念头"),
+            // 1.4.18：删掉虚构的「道痕获取」（代码里从未实现），并写明上限。
+            entry("suhui", "宿慧", "天", 5, "每转数提供额外修炼基数（0.05×转数，上限 +25%）"),
+            // 1.4.18：实际判定是 guzhenren:texiao（340 条特效实体），不是「灵体」（ling 仅 5 条且从未被引用）。
+            entry("shiyuan_zhixing", "噬元之性", "地", 3, "击杀特效实体（guzhenren:texiao）回复真元/念头"),
             entry("fuze_mianchang", "福泽绵长", "地", 3, "气运上限 +15（上限越高，本体气运回复空间越大）"),
-            entry("zhenyuan_ninglian", "真元凝练", "玄", 2, "真元消耗 −10%"),
-            entry("niantou_ninglian", "念头凝练", "玄", 2, "念头消耗 −10%"),
             entry("xinshen_ruyuan", "心神如渊", "玄", 2, "沉默时长减半"),
             entry("kuxiu_buchuo", "苦修不辍", "玄", 2, "修炼速度 +20%"),
             entry("houji_bofa", "厚积薄发", "玄", 2, "本体突破失败概率降低 20%"),
-            entry("suiyue_chendian", "岁月沉淀", "玄", 2, "已耗寿元越多、修炼越快"),
+            // 1.4.18：固定 +10%，从不读寿元（旧描述「已耗寿元越多」是虚标）。
+            entry("suiyue_chendian", "岁月沉淀", "玄", 2, "修炼速度 +10%（固定值，不随寿元变化）"),
             entry("youdou_gaoshou", "游斗高手", "玄", 2, "移动中受击 −6%"),
-            entry("jianbi_qingfeng", "剑指偏锋", "玄", 2, "暴击伤害 +30%（需配合暴击精通）"),
+            // 1.4.18：代码是独立加成，与是否买了「暴击精通」无关；旧描述的「需配合」是假的。
+            entry("jianbi_qingfeng", "剑指偏锋", "玄", 2, "暴击伤害 +30%（仅暴击时生效，无需其他天赋配合）"),
             entry("shouyuan_mianchang", "寿元绵长", "黄", 1, "寿元 +50"),
             entry("qiyun_weiguang", "气运微光", "黄", 1, "气运上限 +5"),
             entry("jingu_qiangjian", "筋骨强健", "黄", 1, "生命上限 +10%"),
             entry("baoji_jingtong", "暴击精通", "黄", 1, "暴击率 +5%、暴击伤害 +20%（叠加）"),
             entry("zhanyi_angran", "战意盎然", "黄", 1, "满血时出伤 +8%"),
-            entry("youshou_nengkai", "右守能铠", "黄", 1, "受击 4% 概率反弹 10% 伤害")
+            entry("youshou_nengkai", "右守能铠", "黄", 1, "受击 4% 概率反弹 10% 伤害（同类只取最强；仅对玩家来源的攻击生效）")
         ));
         out.addAll(TianfuTalents.specs());
         return out;

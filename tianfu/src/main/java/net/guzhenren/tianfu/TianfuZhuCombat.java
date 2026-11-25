@@ -49,8 +49,9 @@ public final class TianfuZhuCombat {
     /** 施加等级恒为 0（与宙侵一致：等级越高目标后续时长越短，取 0 时该运算为恒等）。 */
     private static final int AMPLIFIER = 0;
 
-    /** 目标 UUID → 上次施加的 tick，用于节流。 */
-    private static final Map<java.util.UUID, Integer> LAST_APPLY = new ConcurrentHashMap<>();
+    /** 目标 UUID → (攻击者 UUID → 上次施加 tick)，按 (目标, 攻击者) 节流避免多人互相吞触发。 */
+    private static final Map<java.util.UUID, Map<java.util.UUID, Integer>> LAST_APPLY =
+            new ConcurrentHashMap<>();
 
     private TianfuZhuCombat() {
     }
@@ -97,13 +98,15 @@ public final class TianfuZhuCombat {
             return false;
         }
 
-        // ---- 节流：同一 tick 内多个伤害源只处理一次 ----
+        // ---- 节流：同一 tick 内同一攻击者对同一目标只处理一次 ----
         int now = target.tickCount;
-        Integer last = LAST_APPLY.get(target.getUUID());
+        Map<java.util.UUID, Integer> byAttacker = LAST_APPLY.computeIfAbsent(
+                target.getUUID(), k -> new ConcurrentHashMap<>());
+        Integer last = byAttacker.get(source.getUUID());
         if (last != null && now - last >= 0 && now - last < REFRESH_TICKS) {
             return false;
         }
-        LAST_APPLY.put(target.getUUID(), now);
+        byAttacker.put(source.getUUID(), now);
 
         MobEffectInstance existing = target.getEffect(effect);
 
@@ -172,9 +175,11 @@ public final class TianfuZhuCombat {
                 }
             }
             double elapsed = existing.getDuration() * TianfuZhu.ELAPSED_SCALE;
+            final double finalMult = mult;
 
-            net.guzhenren.procedures.ShangHaiLiuCheng1Procedure.execute(
-                    source.level(), source, target, base, mult, elapsed, candle.liupai());
+            TianfuCombat.runWithoutCombatHooks(() ->
+                    net.guzhenren.procedures.ShangHaiLiuCheng1Procedure.execute(
+                            source.level(), source, target, base, finalMult, elapsed, candle.liupai()));
         } catch (Throwable t) {
             TianfuMod.LOGGER.warn("tianfu {} 结算失败（已忽略）", candle.name(), t);
         }

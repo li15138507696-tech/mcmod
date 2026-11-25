@@ -912,20 +912,8 @@ public final class TianfuVfx {
                 dust(255, 120, 120, 120, 200, 255, 1.4F),
                 dust(255, 220, 130, 180, 140, 255, 0.9F),
                 Shape.RING, 0.90, 4));
-        AURAS.put("shen_liupai_jianji", new Aura(1,                      // 流派兼济：冰蓝转魂紫
-                dust(120, 220, 255, 190, 130, 255, 1.3F),
-                dust(200, 240, 255, 230, 190, 255, 0.8F),
-                Shape.ORBIT, 0.78, 3));
 
         // ---- 天（tier 2）：专属色 ----
-        AURAS.put("bingxue_daoti", new Aura(2,                           // 冰雪道体：霜白冰蓝
-                dust(200, 240, 255, 130, 190, 240, 1.1F),
-                dust(235, 250, 255, 180, 220, 250, 0.7F),
-                Shape.COLUMN, 0.50, 2));
-        AURAS.put("hundao_ronghe", new Aura(2,                           // 魂道融彻：幽蓝
-                dust(110, 160, 255, 60, 90, 180, 1.1F),
-                dust(180, 210, 255, 120, 160, 235, 0.7F),
-                Shape.ORBIT, 0.62, 2));
         AURAS.put("qiyun_yizhi", new Aura(2,                             // 一掷乾坤：金
                 dust(255, 210, 90, 220, 160, 40, 1.1F),
                 dust(255, 240, 170, 240, 200, 110, 0.7F),
@@ -936,10 +924,6 @@ public final class TianfuVfx {
                 Shape.RING, 0.65, 2));
 
         // ---- 天（tier 2）其余条目：按词条气质配色，保证每条天级都有专属色 ----
-        AURAS.put("wuxing_daocang", new Aura(2,                          // 五行道藏：五色流转
-                dust(255, 170, 120, 130, 200, 255, 1.1F),
-                dust(200, 255, 190, 220, 190, 255, 0.7F),
-                Shape.RING, 0.72, 2));
         AURAS.put("qiqiao_linglong", new Aura(2,                         // 七窍玲珑：玲珑金
                 dust(255, 225, 140, 220, 180, 80, 1.0F),
                 dust(255, 245, 200, 240, 215, 140, 0.6F),

@@ -8,6 +8,7 @@ import net.guzhenren.tianfu.net.TianfuDifficultyPayload;
 import net.guzhenren.tianfu.net.TianfuRequestPayload;
 import net.guzhenren.tianfu.net.TianfuRevokePayload;
 import net.guzhenren.tianfu.net.TianfuRollAcceptPayload;
+import net.guzhenren.tianfu.net.TianfuRollDiscardPayload;
 import net.guzhenren.tianfu.net.TianfuRollPayload;
 import net.guzhenren.tianfu.net.TianfuStatePayload;
 import net.neoforged.bus.api.IEventBus;
@@ -51,7 +52,7 @@ public class TianfuMod {
     }
 
     private static void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar("1");
+        PayloadRegistrar registrar = event.registrar("2");
         registrar.playToClient(TianfuStatePayload.TYPE, TianfuStatePayload.STREAM_CODEC, TianfuStatePayload::handle);
         registrar.playToClient(net.guzhenren.tianfu.net.TianfuVfxPayload.TYPE,
                 net.guzhenren.tianfu.net.TianfuVfxPayload.STREAM_CODEC,
@@ -61,9 +62,11 @@ public class TianfuMod {
         registrar.playToServer(TianfuDifficultyPayload.TYPE, TianfuDifficultyPayload.STREAM_CODEC, TianfuDifficultyPayload::handle);
         registrar.playToServer(TianfuRequestPayload.TYPE, TianfuRequestPayload.STREAM_CODEC, TianfuRequestPayload::handle);
         registrar.playToServer(TianfuRevokePayload.TYPE, TianfuRevokePayload.STREAM_CODEC, TianfuRevokePayload::handle);
-        // 「命运由天」随机天赋：摇一次 / 接受并锁定
+        // 「命运由天」随机天赋：摇一次 / 接受并锁定 / 放弃候选
         registrar.playToServer(TianfuRollPayload.TYPE, TianfuRollPayload.STREAM_CODEC, TianfuRollPayload::handle);
         registrar.playToServer(TianfuRollAcceptPayload.TYPE, TianfuRollAcceptPayload.STREAM_CODEC,
                 TianfuRollAcceptPayload::handle);
+        registrar.playToServer(TianfuRollDiscardPayload.TYPE, TianfuRollDiscardPayload.STREAM_CODEC,
+                TianfuRollDiscardPayload::handle);
     }
 }

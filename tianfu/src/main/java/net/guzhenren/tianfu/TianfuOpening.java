@@ -213,6 +213,11 @@ public final class TianfuOpening {
 
     /** 死亡重生：把 tianfu 数据显式带过去，避免 PersistentData 在克隆时丢失。 */
     public static void onClone(ServerPlayer newPlayer, Entity oldPlayer) {
+        onClone(newPlayer, oldPlayer, false);
+    }
+
+    /** 克隆玩家（死亡重生 / 末地传送门返程）：带回 NBT、同步永久属性修正并保留或补满真实血量。 */
+    public static void onClone(ServerPlayer newPlayer, Entity oldPlayer, boolean wasDeath) {
         CompoundTag oldData = oldPlayer.getPersistentData();
         if (oldData.contains(TianfuData.GENERATION_KEY, Tag.TAG_INT)) {
             newPlayer.getPersistentData().putInt(TianfuData.GENERATION_KEY,
@@ -224,6 +229,11 @@ public final class TianfuOpening {
         // Native 9.8 replaces PLAYER_VARIABLES at the end of its NORMAL clone subscriber,
         // including boolean shiqiao. Our LOWEST handler only restores our own NBT.
         TianfuAttributes.sync(newPlayer);
+        if (wasDeath) {
+            newPlayer.setHealth(newPlayer.getMaxHealth());
+        } else if (oldPlayer instanceof net.minecraft.world.entity.LivingEntity oldLiving) {
+            newPlayer.setHealth(Math.min(newPlayer.getMaxHealth(), Math.max(1.0F, oldLiving.getHealth())));
+        }
     }
 
     // ------------------------------------------------------------------ 本体 scoreboard 读写

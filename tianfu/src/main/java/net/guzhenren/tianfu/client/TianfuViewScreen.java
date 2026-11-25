@@ -111,7 +111,7 @@ public class TianfuViewScreen extends Screen {
         search.setValue(pageQuery.getOrDefault(page,""));
         search.setResponder(q->{if(!loadingSearch){pageQuery.put(page,q);pageScroll.put(page,0);buildRows();layout();}});addRenderableWidget(search);
     }
-    @Override public void tick(){if(waitTicks>0&&--waitTicks==0)notice="若状态未更新，请关闭后按K重新查询。";refreshV2(TianfuV2StatePayload.latest());}
+    @Override public void tick(){if(waitTicks>0&&--waitTicks==0)notice="若状态未更新，请查看聊天栏提示或稍后重试。";refreshV2(TianfuV2StatePayload.latest());}
     private TianfuPool.Spec specFor(String id){var s=TianfuPool.byId(id);return s!=null?s:TianfuTalents.byIdIncludingUnavailable(id);}
     private boolean owned(TianfuPool.Spec s){return purchased.contains(s.id());}
     private boolean rowChosen(Row r){if(r.spec()!=null)return owned(r.spec());if(r.option()!=null)return TianfuDifficulty.OPTIONS.indexOf(r.option())==difficulty;return r.id().equals("region:"+region)||r.id().equals("background:"+background);}
@@ -271,28 +271,25 @@ public class TianfuViewScreen extends Screen {
     }
     private boolean modal(){return action!=null;}
     private boolean actionable(){return snapshot!=null&&!confirmed&&waitTicks==0;}
-    private boolean hasAnchorSelection(){return kongqiao>=1&&kongqiao<=10||purchased.stream().anyMatch(TianfuTalents::isAptitudeTier)||purchased.stream().map(this::specFor).anyMatch(s->s!=null&&(s.kind()==TianfuPool.Kind.SIJUE||s.kind()==TianfuPool.Kind.JIYUAN));}
+    private boolean hasAnchorSelection(){return kongqiao>=1&&kongqiao<=10||purchased.contains("v2_aptitude_shackled")||purchased.stream().anyMatch(TianfuTalents::isAptitudeTier)||purchased.stream().map(this::specFor).anyMatch(s->s!=null&&(s.kind()==TianfuPool.Kind.SIJUE||s.kind()==TianfuPool.Kind.JIYUAN));}
     private boolean isTalentSelectionStep(){return wizardStep==TianfuWizardStep.APTITUDE||wizardStep==TianfuWizardStep.LIUPAI
             ||wizardStep==TianfuWizardStep.PHYSIQUE||wizardStep==TianfuWizardStep.NEGATIVE
             ||wizardStep==TianfuWizardStep.MIND||wizardStep==TianfuWizardStep.QIYUN;}
     private boolean canConfirm(){return wizardStep==TianfuWizardStep.REVIEW&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&hasAnchorSelection();}
     /**
-     * 天命尚未结清时是否拦截关界面（1.4.16 起）。
+     * 有未确认的天赋选择时是否拦截关界面（1.4.18 硬门禁）。
      *
-     * <p>口径只拦「已经能结算、却还没结算」，四种情况放行，避免把人锁死在界面里：
+     * <p>口径从 1.4.16 的「只有已经能结算才拦」改为「只要还有未结清内容就拦」：
      * <ul>
-     *   <li>已确认（{@code confirmed}）——本世已结算，只供查阅。</li>
+     *   <li>已确认（{@code confirmed}）——本世已结算，放行。</li>
      *   <li>还没收到服务端状态（{@code snapshot == null}）——不能因为网络抖动锁死。</li>
-     *   <li>还没选难度——等于还没入场，关掉不损失任何选择。</li>
-     *   <li>难度已选但缺少锚点（无空窍、无资质档、无十绝体/机缘）——此时
-     *       {@link #canConfirm()} 恒为 false，再拦就是永久锁死。</li>
+     *   <li>已有购买记录或未接受的随机候选——一律拦住，逼玩家复核、补资质或撤销后再确认。</li>
+     *   <li>没有购买、没有候选——放行；空手离开不损失任何选择。</li>
      * </ul>
-     * 其余情况（难度已选 + 锚点齐 + 未确认）一律拦住，逼玩家走完复核并最终确认。
      */
     private boolean closeBlocked(){
         if(confirmed||snapshot==null)return false;
-        if(TianfuDifficulty.byIndex(difficulty)==null)return false;
-        return hasAnchorSelection();
+        return !purchased.isEmpty()||!pending.isEmpty();
     }
     private boolean canRoll(){return isTalentSelectionStep()&&actionable()&&TianfuDifficulty.byIndex(difficulty)!=null&&rolls<TianfuRoll.MAX_ROLLS;}
     private boolean canAccept(){return isTalentSelectionStep()&&actionable()&&!pending.isEmpty()&&TianfuDifficulty.byIndex(difficulty)!=null;}
@@ -457,7 +454,7 @@ public class TianfuViewScreen extends Screen {
     private void renderReviewActions(GuiGraphics g){
         scaledTitle(g,"结算检查",detailBody.x0,detailBox.y0+12,detailBody.w(),LIGHT);
         String status=confirmed?"本世已确认，只供查阅":snapshot==null?"等待服务端同步":
-                !hasAnchorSelection()?"尚缺结算根基":TianfuDifficulty.byIndex(difficulty)==null?"尚未选择难度":
+                !hasAnchorSelection()?"尚缺结算根基：请在资质页选择空窍/十绝体":TianfuDifficulty.byIndex(difficulty)==null?"尚未选择难度":
                 closeDenied&&!notice.isEmpty()?notice:"条件已满足，可提交复核";
         g.drawString(font,fit(status,detailBody.w()),detailBody.x0,detailBox.y0+42,canConfirm()&&!closeDenied?META:RED,false);
         g.drawString(font,fit("自由点 "+points+" · 已摇 "+rolls+"/"+TianfuRoll.MAX_ROLLS,detailBody.w()),detailBody.x0,detailBox.y0+58,MUTED,false);
@@ -489,6 +486,7 @@ public class TianfuViewScreen extends Screen {
         drawScroll(g,new Hit(detailBody.x1-3,detailBody.y0,detailBody.x1,detailBody.y1),detailScroll,detailMax);
         if(isTalentSelectionStep()){
             button(g,rollHit,"随机",canRoll(),false);button(g,acceptHit,"接受候选",canAccept(),false);
+            if(!pending.isEmpty())button(g,confirmHit,"放弃候选",actionable(),false);
         }
         var d=decision(r);boolean purchasedRow=r!=null&&r.spec()!=null&&owned(r.spec());
         button(g,detailAction,r!=null&&r.spec()==null&&!r.id().equals("native")?"选定":"购买",d.allowed()&&!purchasedRow,false);
@@ -515,7 +513,10 @@ public class TianfuViewScreen extends Screen {
             if(receipt!=null)s+="原成交："+TianfuUiRules.price(receipt.paidCost())+"；撤销按此记录。\n";
             var d=decision(r);s+="状态："+(owned(spec)?"已选择":"尚未选择")+"\n"+d.reason();if(d.allowed())s+="\n本次操作后余额："+d.afterPoints()+"点（服务端复核）";
             if(pending.contains(spec.id()))s+="\n随机候选：尚未接受，尚未扣点。";if(spec.cost()<0)s+="\n负面补点计入24点总上限，撤销时扣回原补点。硬代价请逐项核对。";
-            if(TianfuMindTable.LEVELS.containsKey(spec.id()))s+="\n同族层级互斥：改选时先按旧成交价退款，再扣新价。";
+            if(net.guzhenren.tianfu.v2.TianfuInterlock.known(spec.id()))s+="\n同族互斥：同类只能持有最高等级；改选时先按旧成交价退款，再扣新价。";
+            // 1.4.18：按族动态显示真实上限（只显示代码里确实存在的上限，避免假描述）
+            String capNote=net.guzhenren.tianfu.v2.TianfuInterlock.capNote(spec.id());
+            if(!capNote.isEmpty())s+="\n"+capNote;
         }else if(r.option()!=null)s+="难度选定后本世不可更改，基础点只发放一次。\n随机与手动配点共用当前余额，接受候选后仍须最终确认。";
         else if(page==TianfuPage.ORIGIN)s+="当前组合："+regionName()+" / "+backgroundName()+"\n地域和类型需要一并提交；取消弹窗会恢复原出身。\n效果在本世最终确认时结算。";
         return s;
@@ -542,7 +543,7 @@ public class TianfuViewScreen extends Screen {
         return "";
     }
     private void renderConfirm(GuiGraphics g){
-        g.fill(0,0,width,height,OVERLAY);g.fill(modalBox.x0,modalBox.y0,modalBox.x1,modalBox.y1,PANEL);frame(g,modalBox,GOLD);g.drawString(font,action.equals("confirm")?"定下此生命格":"核对这次选择",modalBox.x0+12,modalBox.y0+11,LIGHT,false);
+        g.fill(0,0,width,height,OVERLAY);g.fill(modalBox.x0,modalBox.y0,modalBox.x1,modalBox.y1,PANEL);frame(g,modalBox,GOLD);g.drawString(font,action.equals("confirm")?"定下此生命格":action.equals("discard")?"放弃随机候选":"核对这次选择",modalBox.x0+12,modalBox.y0+11,LIGHT,false);
         var lines=wrap(message,modalBody.w()-8);modalMax=Math.max(0,lines.size()*12-modalBody.h());modalScroll=(int)clamp(modalScroll,0,modalMax);g.enableScissor(modalBody.x0,modalBody.y0,modalBody.x1,modalBody.y1);
         for(int i=0;i<lines.size();i++){int y=modalBody.y0+i*12-modalScroll;if(y+10>=modalBody.y0&&y<modalBody.y1)g.drawString(font,lines.get(i),modalBody.x0,y,TEXT,false);}g.disableScissor();
         drawScroll(g,new Hit(modalBody.x1-3,modalBody.y0,modalBody.x1,modalBody.y1),modalScroll,modalMax);button(g,yesHit,"确定提交",actionable()&&snapshot.revision()==pendingRevision,true);button(g,noHit,"返回修改",true,false);
@@ -582,7 +583,7 @@ public class TianfuViewScreen extends Screen {
     }
     private void submit(){
         if(!actionable()||snapshot.revision()!=pendingRevision){clearPending();return;}
-        switch(action){case "buy"->PacketDistributor.sendToServer(new TianfuBuyPayload(pendingId));case "revoke"->PacketDistributor.sendToServer(new TianfuRevokePayload(pendingId));case "difficulty"->PacketDistributor.sendToServer(new TianfuDifficultyPayload(pendingId));case "origin"->PacketDistributor.sendToServer(new TianfuOriginPayload(region,background,pendingRevision));case "roll"->PacketDistributor.sendToServer(new TianfuRollPayload(TianfuDifficulty.byIndex(difficulty).id()));case "accept"->PacketDistributor.sendToServer(new TianfuRollAcceptPayload());case "confirm"->PacketDistributor.sendToServer(new TianfuConfirmPayload());default->{clearPending();return;}}
+        switch(action){case "buy"->PacketDistributor.sendToServer(new TianfuBuyPayload(pendingId));case "revoke"->PacketDistributor.sendToServer(new TianfuRevokePayload(pendingId));case "difficulty"->PacketDistributor.sendToServer(new TianfuDifficultyPayload(pendingId));case "origin"->PacketDistributor.sendToServer(new TianfuOriginPayload(region,background,pendingRevision));case "roll"->PacketDistributor.sendToServer(new TianfuRollPayload(TianfuDifficulty.byIndex(difficulty).id()));case "accept"->PacketDistributor.sendToServer(new TianfuRollAcceptPayload());case "discard"->PacketDistributor.sendToServer(new TianfuRollDiscardPayload());case "confirm"->PacketDistributor.sendToServer(new TianfuConfirmPayload());default->{clearPending();return;}}
         clearPending();waitTicks=60;notice="已提交，等待服务端核对。";
     }
     @Override public boolean mouseClicked(double x,double y,int button){
@@ -602,6 +603,7 @@ public class TianfuViewScreen extends Screen {
         }
         if(isTalentSelectionStep()&&rollHit.contains(x,y)){if(canRoll())ask("roll","","生成一组随机候选，仅成功生成才使用一次机会。\n\n候选基于当前余额和已有命格；接受后追加到已选，不会替换原选择。\n剩余 "+Math.max(0,TianfuRoll.MAX_ROLLS-rolls)+"次。\n接受后仍须最终确认；资质不足时请到资质页补选。");return true;}
         if(isTalentSelectionStep()&&acceptHit.contains(x,y)){if(canAccept())ask("accept","","接受以下随机候选？\n\n"+candidateText()+"\n成功后结算并加入已选，失败保留候选。接受不会自动最终确认。");return true;}
+        if(isTalentSelectionStep()&&confirmHit.contains(x,y)){if(!pending.isEmpty()&&actionable())ask("discard","","放弃以下随机候选？\n\n"+candidateText()+"\n放弃不返还摇取次数，也不扣点。");return true;}
         if(confirmHit.contains(x,y)){if(canConfirm())ask("confirm","",finalReview());return true;}
         if(detailAction.contains(x,y)){Row r=selected();if(r==null||r.spec()==null||!owned(r.spec()))activateSelected();return true;}if(revokeHit.contains(x,y)){Row r=selected();if(r!=null&&r.spec()!=null&&owned(r.spec()))activateSelected();return true;}if(!wide&&detailOpen){if(backHit.contains(x,y)){detailOpen=false;layout();}return true;}
         if(categoryPrevHit!=null&&categoryPrevHit.contains(x,y)){
@@ -644,7 +646,11 @@ public class TianfuViewScreen extends Screen {
                 TianfuWizardSession.remember(wizardStep);
                 reviewTextCache=null;buildRows();
             }
-            notice="天命未落定：请逐项复核并「最终确认」，此卷方可合上。";
+            notice=!hasAnchorSelection()
+                    ?"天命未落定：请到「资质根基」选择空窍档位/十绝体；空窍桎梏会按丁等锁定，确认后此卷方可合上。"
+                    :!pending.isEmpty()
+                    ?"天命未落定：仍有未接受的随机候选；可先「最终确认」（不会购买候选），此卷方可合上。"
+                    :"天命未落定：请逐项复核并「最终确认」，此卷方可合上。";
             closeDenied=true;
             layout();
             return;

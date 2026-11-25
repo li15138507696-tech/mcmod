@@ -16,21 +16,22 @@ import net.minecraft.world.scores.criteria.ObjectiveCriteria;
 import net.minecraft.world.scores.criteria.ObjectiveCriteria.RenderType;
 
 /**
- * 本体天赋入池的原生写入：甲乙丙丁资质通过 9.8 {@code UikongqiaoquedingProcedure} 结算；十绝体按该过程
- * {@code kongqiao == 3} 分支逐号写入（同一随机区间、同一概率、同一字段），让本体 KE1（真元反推档位）与 KE2（十绝体
- * 运行时效果）原生生效，附属不自建一套效果体系。
+ * 本体天赋入池的原生写入：甲乙丙丁资质通过 9.8 / 10.x 的 {@code UikongqiaoquedingProcedure} 结算；
+ * 十绝体按该过程的 {@code kongqiao == 3} 分支逐号写入（同一随机区间、同一概率、同一字段），
+ * 让本体 KE1（真元反推档位）与 KE2（十绝体运行时效果）原生生效，附属不自建一套效果体系。
+ * 10.x 中 {@code queding} 转调 {@code UikongqiaoguanbiProcedure}，该分支仍在。
  */
 public final class TianfuNative {
     private TianfuNative() {
     }
 
-    /** Run native 9.8 grade settlement, including its fortune/destiny side effects. */
+    /** Run native grade settlement, including its fortune/destiny side effects. */
     public static void applyAptitudeTier(ServerPlayer player, PlayerVariables v, int aptitude) {
         int finalAptitude = Guzhenren98Settlement.finalAptitude(aptitude);
         v.kongqiao = aptitude;
         TianfuOpening.runNativeSettlement(player,
                 () -> UikongqiaoquedingProcedure.execute(player.level(), player));
-        // The 9.8 KE1 conversion is deterministic; publish the same final grade immediately.
+        // The native KE1 conversion is deterministic; publish the same final grade immediately.
         v.kongqiao = finalAptitude;
         initializeCurrentYuan(v);
         v.markSyncDirty();
@@ -38,7 +39,7 @@ public final class TianfuNative {
 
     private static void initializeCurrentYuan(PlayerVariables v) {
         if (!Double.isFinite(v.zuida_zhenyuan) || v.zuida_zhenyuan <= 0.0)
-            throw new IllegalStateException("本体 9.8 未生成有效的真元上限");
+            throw new IllegalStateException("本体未生成有效的真元上限");
         if (!Double.isFinite(v.zhenyuan) || v.zhenyuan <= 0.0) v.zhenyuan = v.zuida_zhenyuan;
         else v.zhenyuan = Math.min(v.zhenyuan, v.zuida_zhenyuan);
     }

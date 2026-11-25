@@ -203,6 +203,11 @@ public final class TianfuV2Store {
                     id, cost.intValue(), Math.max(0, -cost.intValue()), true));
         }
 
+        List<String> purchased = new ArrayList<>(current.purchased());
+        int points = current.points();
+        writePurchased(tag, purchased);
+        tag.putInt(KEY_POINTS, points);
+
         CompoundTag receiptTag = new CompoundTag();
         for (Map.Entry<String, TianfuSelection.Receipt> entry : receipts.entrySet()) {
             writeReceipt(receiptTag, entry.getKey(), entry.getValue());
@@ -264,7 +269,10 @@ public final class TianfuV2Store {
         tag.putInt(KEY_POINTS, next.points());
         tag.putInt(KEY_DIFFICULTY, next.difficulty());
         tag.putBoolean(KEY_CONFIRMED, next.confirmed());
-        tag.putInt(SCHEMA, TianfuSelection.SCHEMA);
+        // 写回快照自己的 schema，而不是无条件写 2（1.4.18 / P0-5）。
+        // 旧实现硬写 2 会让「未迁移就落库」的档永久跳过 migrate()：
+        // 已购条目拿不到 Receipt → 旧负面补点按 0 计、旧条目永久不可撤销。
+        tag.putInt(SCHEMA, next.schema());
         tag.putLong(REVISION, next.revision());
         writePurchased(tag, next.purchased());
 

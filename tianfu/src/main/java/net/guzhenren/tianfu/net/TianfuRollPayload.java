@@ -70,8 +70,10 @@ public record TianfuRollPayload(String difficultyId) implements CustomPacketPayl
             }
             net.guzhenren.tianfu.v2.TianfuV2Store.migrate(player);
             var snapshot = net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
+            boolean hasMainDao = !net.guzhenren.tianfu.TianfuMainDao.of(
+                    player, player.getData(net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES)).isEmpty();
             List<String> plan = net.guzhenren.tianfu.v2.TianfuEconomy.planRoll(snapshot,
-                    new Random(player.getRandom().nextLong()));
+                    new Random(player.getRandom().nextLong()), hasMainDao);
             if (plan.isEmpty()) {
                 player.displayClientMessage(Component.literal("当前余额与选择无法组成随机方案，已保留原候选，未消耗次数"), true);
             } else {

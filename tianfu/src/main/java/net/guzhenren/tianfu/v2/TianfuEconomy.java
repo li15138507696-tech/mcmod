@@ -22,6 +22,8 @@ import net.guzhenren.tianfu.TianfuTalents;
  */
 public final class TianfuEconomy {
     private static final String APTITUDE_LOCK_ID = "v2_aptitude_shackled";
+    /** 随机批次的补点预算（1.4.18）：比 NEGATIVE_CAP=24 更保守，买前预测，绝不越界。 */
+    private static final int RANDOM_GRANT_BUDGET = 12;
     private TianfuEconomy() { }
 
     // ------------------------------------------------------------------ 目录与可用性
@@ -31,6 +33,9 @@ public final class TianfuEconomy {
      * 未知 id 也返回 null，由调用方区分 LOCKED 与 UNKNOWN_ID。
      */
     private static Integer catalogCost(String id) {
+        if (id == null || id.startsWith(TianfuTalents.ORIGIN_PREFIX)) {
+            return null;
+        }
         TianfuPool.Spec spec = TianfuPool.byId(id);
         if (spec != null) {
             return spec.kind() == TianfuPool.Kind.JIYUAN ? null : Integer.valueOf(spec.cost());
@@ -41,6 +46,15 @@ public final class TianfuEconomy {
 
     /** 已购但当前不可用（附属未装）的条目可以撤销，但不能新购。 */
     private static boolean availableForPurchase(String id) {
+        if (id == null || id.startsWith(TianfuTalents.ORIGIN_PREFIX)) {
+            return false;
+        }
+        // 恶意组门槛（1.4.18）：未装 l2hostility 时一律不可购。
+        // 旧实现只在 TianfuPool 注册层过滤，而 planRoll 遍历的是 TianfuTalents.all()，
+        // 于是「没装恶意」也能通过随机批次买到恶意词条并生效。
+        if (id.startsWith("malice_") && !TianfuTalents.maliceLoaded()) {
+            return false;
+        }
         return TianfuTalents.isAvailable(id)
                 && (TianfuTalents.byId(id) != null || TianfuPool.byId(id) != null);
     }
@@ -94,7 +108,7 @@ public final class TianfuEconomy {
         if (state == null) {
             return new TianfuSelection.Result(false, TianfuSelection.Rejection.UNKNOWN_ID, null);
         }
-        if (id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty() || id.startsWith(TianfuTalents.ORIGIN_PREFIX)) {
             return fail(state, TianfuSelection.Rejection.UNKNOWN_ID);
         }
         if (state.confirmed()) {
@@ -125,15 +139,18 @@ public final class TianfuEconomy {
 
         TianfuPool.Spec spec = TianfuPool.byId(id);
         boolean alreadyHasAptitudeTier = hasAptitudeTier(state.purchased());
+        boolean alreadyHasSijue = hasSijue(state.purchased());
+        boolean alreadyHasAptitudeLock = state.purchased().contains(APTITUDE_LOCK_ID);
         if (TianfuTalents.isAptitudeTier(id)
-                && (alreadyHasAptitudeTier || hasSijue(state.purchased())
-                        || state.purchased().contains(APTITUDE_LOCK_ID))) {
+                && (alreadyHasAptitudeTier || alreadyHasSijue || alreadyHasAptitudeLock)) {
             return fail(state, TianfuSelection.Rejection.CONFLICT);
         }
-        if (spec != null && spec.kind() == TianfuPool.Kind.SIJUE && alreadyHasAptitudeTier) {
+        if (spec != null && spec.kind() == TianfuPool.Kind.SIJUE
+                && (alreadyHasAptitudeTier || alreadyHasAptitudeLock)) {
             return fail(state, TianfuSelection.Rejection.CONFLICT);
         }
-        if (APTITUDE_LOCK_ID.equals(id) && alreadyHasAptitudeTier) {
+        if (APTITUDE_LOCK_ID.equals(id)
+                && (alreadyHasAptitudeTier || alreadyHasSijue)) {
             return fail(state, TianfuSelection.Rejection.CONFLICT);
         }
 
@@ -151,24 +168,23 @@ public final class TianfuEconomy {
             }
         }
 
-        // 同族层级：重选时按旧成交价退款，再扣新价，原子替换。
-        TianfuMindTable.Level level = TianfuMindTable.LEVELS.get(id);
-        if (level != null) {
-            for (String owned : state.purchased()) {
-                TianfuMindTable.Level other = TianfuMindTable.LEVELS.get(owned);
-                if (other == null || !other.family().equals(level.family())) {
-                    continue;
-                }
-                TianfuSelection.Receipt old = state.receipts().get(owned);
-                if (old == null) {
-                    return fail(state, TianfuSelection.Rejection.LEGACY_PRICE_UNKNOWN);
-                }
-                points += old.paidCost();
-                grant -= old.grant();
-                purchased.remove(owned);
-                receipts.remove(owned);
-                break;
+        // 互斥族（1.4.18）：TIER 只升不降、EXCLUSIVE 只能选一个；CAP 购买时不禁选。
+        // 移植自 TianfuMindTable.LEVELS 的旧逻辑，改为查 TianfuInterlock 的三类族表。
+        String interlock = TianfuInterlock.conflict(state.purchased(), id);
+        if (interlock != null) {
+            // 具体理由留给服务端日志与 UI 镜像；线上回包沿用 CONFLICT（文案即「与已选内容互斥」）。
+            return fail(state, TianfuSelection.Rejection.CONFLICT);
+        }
+        // TIER 升级：按旧成交价退款并移出旧条目，原子替换。
+        for (String owned : TianfuInterlock.replacedBy(state.purchased(), id)) {
+            TianfuSelection.Receipt old = state.receipts().get(owned);
+            if (old == null) {
+                return fail(state, TianfuSelection.Rejection.LEGACY_PRICE_UNKNOWN);
             }
+            points += old.paidCost();
+            grant -= old.grant();
+            purchased.remove(owned);
+            receipts.remove(owned);
         }
 
         // 补点占用：负成本整条计入，不做部分发放。
@@ -198,7 +214,7 @@ public final class TianfuEconomy {
         if (state == null) {
             return new TianfuSelection.Result(false, TianfuSelection.Rejection.UNKNOWN_ID, null);
         }
-        if (id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty() || id.startsWith(TianfuTalents.ORIGIN_PREFIX)) {
             return fail(state, TianfuSelection.Rejection.UNKNOWN_ID);
         }
         if (state.confirmed()) {
@@ -314,6 +330,14 @@ public final class TianfuEconomy {
      * @return 任一互斥/限额/余额不合法则整批拒绝，不部分落库
      */
     public static TianfuSelection.Result acceptRoll(TianfuSelection.Snapshot state, List<String> ids) {
+        return acceptRoll(state, ids, false);
+    }
+
+    /**
+     * 随机批次沿用旧协议，重新验证整批每一项，不能只验证净成本；同时校验主修流派门禁。
+     */
+    public static TianfuSelection.Result acceptRoll(
+            TianfuSelection.Snapshot state, List<String> ids, boolean hasMainDao) {
         if (state == null) {
             return new TianfuSelection.Result(false, TianfuSelection.Rejection.UNKNOWN_ID, null);
         }
@@ -326,6 +350,9 @@ public final class TianfuEconomy {
         }
         TianfuSelection.Snapshot working = state;
         for (String id : ids) {
+            if (!hasMainDao && TianfuTalents.requiresMainDao(id)) {
+                return fail(state, TianfuSelection.Rejection.NO_MAIN_DAO);
+            }
             TianfuSelection.Result step = buy(working, id);
             if (!step.ok()) {
                 return fail(state, step.reason());
@@ -352,6 +379,10 @@ public final class TianfuEconomy {
      * @return 不可变候选 ID 列表；无可行解返回空列表且不写任何状态
      */
     public static List<String> planRoll(TianfuSelection.Snapshot state, Random rng) {
+        return planRoll(state, rng, false);
+    }
+
+    public static List<String> planRoll(TianfuSelection.Snapshot state, Random rng, boolean hasMainDao) {
         if (rng == null) {
             throw new NullPointerException("rng");
         }
@@ -365,6 +396,9 @@ public final class TianfuEconomy {
             if (!availableForPurchase(talent.id())) {
                 continue;
             }
+            if (!hasMainDao && TianfuTalents.requiresMainDao(talent.id())) {
+                continue;
+            }
             if (talent.cost() < 0) {
                 negatives.add(talent.id());
             } else if (talent.cost() > 0) {
@@ -376,6 +410,9 @@ public final class TianfuEconomy {
             sijues.add(spec.id());
         }
         for (TianfuPool.Spec spec : TianfuPool.entries()) {
+            if (!hasMainDao && TianfuTalents.requiresMainDao(spec.id())) {
+                continue;
+            }
             if (spec.cost() > 0) {
                 positives.add(spec.id());
             }
@@ -388,8 +425,18 @@ public final class TianfuEconomy {
         // 1) 先补点：不超过 24 上限，且最多 6 条，补到 12 点即停，避免整批全是负面。
         int negativesPicked = 0;
         for (String id : shuffled(negatives, rng)) {
-            if (negativesPicked >= 6 || working.negativeGrant() >= 12) {
+            if (negativesPicked >= 6) {
                 break;
+            }
+            // 1.4.18 修正：旧实现是「买之前看 grant>=12 就 break」，最后一条会把总额顶过去，
+            // 实测（DP 穷举 {8×3,5×5,2×12}）可漏到 **19 点**，与 NEGATIVE_CAP=24 不一致。
+            // 现在改成**买前按本条全额预测**，超预算就跳过这一条（继续找更小的），绝不越界。
+            Integer negCost = catalogCost(id);
+            if (negCost == null) {
+                continue;
+            }
+            if (working.negativeGrant() + Math.max(0, -negCost.intValue()) > RANDOM_GRANT_BUDGET) {
+                continue;
             }
             TianfuSelection.Result step = buy(working, id);
             if (!step.ok()) {
@@ -428,7 +475,7 @@ public final class TianfuEconomy {
             return List.of();
         }
         // 4) 整批校验：任何一条不合法就整批作废，返回空列表且不写状态。
-        TianfuSelection.Result check = acceptRoll(state, picked);
+        TianfuSelection.Result check = acceptRoll(state, picked, hasMainDao);
         return check.ok() ? List.copyOf(picked) : List.of();
     }
 }

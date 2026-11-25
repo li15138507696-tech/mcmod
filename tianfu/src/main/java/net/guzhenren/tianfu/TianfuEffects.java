@@ -26,7 +26,16 @@ import net.minecraft.world.entity.monster.Enemy;
  * 这些持续效果不自行猜测自然回复基线，也不改写真元上限。
  */
 public final class TianfuEffects {
+    private static final java.util.Map<java.util.UUID, Long> FAILED_SETTLE_REV =
+            new java.util.concurrent.ConcurrentHashMap<>();
+
     private TianfuEffects() {
+    }
+
+    public static void forget(java.util.UUID id) {
+        if (id != null) {
+            FAILED_SETTLE_REV.remove(id);
+        }
     }
 
     /**
@@ -37,6 +46,11 @@ public final class TianfuEffects {
      *                  否则「已有体质时购买任意词条」会把该体质的上限重复乘算。
      */
     public static void applyOnce(ServerPlayer player, PlayerVariables v, Set<String> ids, int bodyTizhi) {
+        applyOnce(player, v, ids, bodyTizhi, TianfuTalents.snapshotCapped(v));
+    }
+
+    static void applyOnce(ServerPlayer player, PlayerVariables v, Set<String> ids, int bodyTizhi,
+                          java.util.Map<String, Double> capBase) {
         // 体质 · 上限类
         if (bodyTizhi == 24) {                // 幽魂凝识体
             v.zuida_hunpo *= 1.25;
@@ -67,8 +81,8 @@ public final class TianfuEffects {
             addCap(v, 5.0);
         }
 
-        // 扩展词条表：上限类（乘法）与气运 / 寿元（加法）一次性写入本体字段
-        TianfuTalents.applyOnce(player, v, ids);
+        // 扩展词条表：上限类（乘法）与气运 / 寿元（加法）一次性写入本体字段，并按同一基值统一钳回
+        TianfuTalents.applyOnce(player, v, ids, capBase);
 
         v.markSyncDirty();
     }
@@ -144,24 +158,34 @@ public final class TianfuEffects {
         // 而且确认后已锁定不可撤销 → 玩家永久卡在「买了但没效果」。
         // 这里做一次幂等自愈：已确认但本世从未结算过的玩家，补跑一次结算。
         if (TianfuData.isConfirmed(player) && !TianfuData.isSettled(player) && player.tickCount % 20 == 0) {
-            // 旧存档兼容：本标记是 1.2.13 新增的，此前正常确认过的玩家都没有它。
-            // 判据：已确认 + 体质已写进 v.tizhi（或已购里有十绝体/机缘）→ 说明当年结算过了，
-            // 只补标记、绝不重跑 applyAllConfirmed（重跑会把上限 / 道痕乘两遍）。
-            PlayerVariables pv = player.getData(GuzhenrenModVariables.PLAYER_VARIABLES);
-            boolean alreadyApplied = pv.tizhi != 0.0;
-            if (!alreadyApplied) {
-                for (String id : TianfuApply.sanitize(TianfuData.purchased(player))) {
-                    TianfuPool.Spec spec = TianfuPool.byId(id);
-                    if (spec != null && (spec.kind() == TianfuPool.Kind.SIJUE
-                            || spec.kind() == TianfuPool.Kind.JIYUAN)) {
-                        alreadyApplied = true;
-                        break;
+            long rev = net.guzhenren.tianfu.v2.TianfuV2Store.read(player).revision();
+            if (!Long.valueOf(rev).equals(FAILED_SETTLE_REV.get(player.getUUID()))) {
+                // 旧存档兼容：本标记是 1.2.13 新增的，此前正常确认过的玩家都没有它。
+                // 判据：已确认 + 体质已写进 v.tizhi（或已购里有十绝体/机缘）→ 说明当年结算过了，
+                // 只补标记、绝不重跑 applyAllConfirmed（重跑会把上限 / 道痕乘两遍）。
+                PlayerVariables pv = player.getData(GuzhenrenModVariables.PLAYER_VARIABLES);
+                boolean alreadyApplied = pv.tizhi != 0.0;
+                if (!alreadyApplied) {
+                    for (String id : TianfuApply.sanitize(TianfuData.purchased(player))) {
+                        TianfuPool.Spec spec = TianfuPool.byId(id);
+                        if (spec != null && (spec.kind() == TianfuPool.Kind.SIJUE
+                                || spec.kind() == TianfuPool.Kind.JIYUAN)) {
+                            alreadyApplied = true;
+                            break;
+                        }
                     }
                 }
+                // Legacy instant purchases must not receive their old upper bounds a second time.
+                // V2 confirmation still has to settle origin/constraints before setting settled.
+                var rejection = TianfuApply.tryApplyAllConfirmed(player, alreadyApplied && !TianfuData.isDeferred(player));
+                if (rejection == net.guzhenren.tianfu.v2.TianfuSelection.Rejection.NONE) {
+                    FAILED_SETTLE_REV.remove(player.getUUID());
+                } else {
+                    FAILED_SETTLE_REV.put(player.getUUID(), rev);
+                    TianfuMod.LOGGER.warn("[天命] 自动补结算被拒绝（player={}, rev={}, reason={}），本修订不再每秒重试",
+                            player.getScoreboardName(), rev, rejection);
+                }
             }
-            // Legacy instant purchases must not receive their old upper bounds a second time.
-            // V2 confirmation still has to settle origin/constraints before setting settled.
-            TianfuApply.applyAllConfirmed(player, alreadyApplied && !TianfuData.isDeferred(player));
         }
 
         // 闸门：本世天赋「最终确认」前，词条与体质加成一律不生效。
@@ -268,8 +292,20 @@ public final class TianfuEffects {
             // 早期版本硬判 == 617.0，在这些附属的炼蛊流程下加成会被整个绕过，
             // 故改为「非 0 即视为有配方在炼」。
             boolean guiOpen = v.GuFang != 0.0;
-            // 投料窗口内不加速：给玩家留足手动投料时间（本体窗口 20 点 ≈ 10 秒）
-            boolean inFeedWindow = cur >= 50.0 && cur <= 70.0;
+            // 投料窗口内不加速：给玩家留足手动投料时间。
+            //
+            // 1.4.18 修正（重要）：本体投料窗口**不是统一的 50–70**。对 792 个完成型过程
+            // 逐一解码后分三族：
+            //   A 族 347 个：只有 50 ≤ p ≤ 70；
+            //   B 族 351 个：**20 ≤ p ≤ 40 前置段 + 50 ≤ p ≤ 70 第二段，两段都必须投料**
+            //               （结算要求 中途加材料1 == 1 && 中途加材料 == 1）；
+            //   C 族  94 个：无投料窗口。
+            // 旧实现只冻结了 50–70，导致 B 族第一段窗口被加速压缩（31.5s → 9s）；
+            // 更糟的是会跳过 p == 40 的边界失败判定（本体在此扣血 + 魂魄 −转数×10 +
+            // 明确提示「炼制失败」），使玩家失去失败反馈，却在 p == 100 时因
+            // 中途加材料1 != 1 而**整段跳过结算**——进度清零、材料与魂魄静默全损。
+            // 因此冻结区间必须取所有投料窗口的**并集**。
+            boolean inFeedWindow = (cur >= 20.0 && cur <= 40.0) || (cur >= 50.0 && cur <= 70.0);
             // 用我方独立节拍（每 30 tick = 本体 1 点的节奏），不读 lg_ke：
             // lg_ke 会被本体自己归零，读它必然依赖两个监听器的执行先后。
             boolean ourBeat = player.tickCount % 30 == 0;
@@ -301,13 +337,27 @@ public final class TianfuEffects {
                     // 又保证 LianGuJinDu 始终是整数（本体完成判定是 == 100.0，小数会永远命不中）。
                     double acc = TianfuData.getDouble(player, "liangu_acc", 0.0) + liangu;
                     int bonus = (int) Math.floor(acc);
+                    // 临窗减速：进入任一投料窗口前的最后 3 点强制逐点推进。
+                    // 本体全部边界判定（== 40 / == 70 / == 100）都按「每次 +1」写，
+                    // 单拍给 2–3 点会让这些精确相等判定被跳过。
+                    boolean nearWindow = (cur >= 17.0 && cur < 20.0) || (cur >= 47.0 && cur < 50.0);
+                    if (nearWindow) {
+                        bonus = Math.min(bonus, 1);
+                    }
                     if (bonus > 0) {
                         acc -= bonus;
                         // 上限 99：最后 1 点必须由本体的 +1 完成，越过 100 会让 == 100.0 永久失效
                         v.LianGuJinDu = Math.min(99.0, cur + bonus);
                         touched = true;
                     }
-                    TianfuData.putDouble(player, "liangu_acc", acc);
+                    // 积压封顶 1 点：被临窗限速时不清账，但也不许攒过头，
+                    // 否则窗口一结束会一次性释放多点，重新制造跳点。
+                    TianfuData.putDouble(player, "liangu_acc", Math.min(acc, 0.999));
+                } else if (inFeedWindow) {
+                    // 窗口内完全不动进度，同时把积压压回 1 点以内（防窗口结束瞬间爆发）
+                    if (TianfuData.getDouble(player, "liangu_acc", 0.0) > 0.999) {
+                        TianfuData.putDouble(player, "liangu_acc", 0.999);
+                    }
                 }
             }
         }

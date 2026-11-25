@@ -22,7 +22,9 @@ if (modVersion == null || modVersion.trim().isEmpty()) {
 version = modVersion.trim()
 
 base {
-    archivesName = 'tianfu'
+    // 交付命名统一为「天命-<天命版本>-<适配本体版本>」；历史 tianfu-* 产物保留不改。
+    // 需要别的名字时传 -Ptianfu.archiveName=...。
+    archivesName = project.findProperty('tianfu.archiveName') ?: '天命'
 }
 
 java {
@@ -126,7 +128,9 @@ tasks.withType(JavaCompile).configureEach {
 }
 
 jar {
-    archiveClassifier = 'mc98'
+    // 统一单包交付：默认无版本后缀（天命-<version>.jar），单包自动适配 9.8 / 10.4 / 10.20 / 11.22+。
+    // 如需额外加后缀，可传 -Ptianfu.archiveSuffix=...。
+    archiveClassifier = project.findProperty('tianfu.archiveSuffix') ?: ''
     manifest {
         attributes(
                 'Specification-Title': 'tianfu',

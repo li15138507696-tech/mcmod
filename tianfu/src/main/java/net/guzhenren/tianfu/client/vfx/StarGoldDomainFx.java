@@ -19,7 +19,7 @@ public final class StarGoldDomainFx {
     public static final String MODID = "tianfu";
     public static final ResourceLocation PIPELINE = ResourceLocation.fromNamespaceAndPath(MODID, "star_gold_domain");
 
-    private static float StarGoldDomainStrength = 0.8000f;
+    private static float StarGoldDomainStrength = 0.0000f;
     private static float StarGoldDomainPhase = 0.0000f;
     private static float StarGoldDomainProgress = 0.0000f;
     private static float StarGoldDomainFog = 0.1000f;

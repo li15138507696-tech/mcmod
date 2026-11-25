@@ -17,11 +17,13 @@ import net.minecraft.world.level.LevelAccessor;
  * 开窍收尾的 TAIL 拦截：{@link TianfuOpening#onCloseOpenQiao}——
  * 标记本世开窍已结算 + 提示 K 键 + 未选难度时弹出附属天赋界面。
  *
- * <p>本适配严格绑定已核验的 9.8 {@code UikongqiaoquedingProcedure}，不声称兼容 10.x。
+ * <p>本适配覆盖已核验的 9.8 与 10.4/10.20 {@code UikongqiaoquedingProcedure}。
+ * 10.x 把开窍仪式搬进 {@code UikongqiaoguanbiProcedure}，本过程退化为薄壳，
+ * 但同名同描述符入口与末尾 return 仍在，TAIL 钩子继续可达。
  *
- * <p>本体 9.8 在该过程开头无条件关闭玩家容器。附属显式调用原生结算时
- * （希望蛊开窍事务或选定资质），只有事务作用域内跳过这次关闭，避免原生结算失败回滚后
- * 界面已经不可恢复；本体独立触发此过程时仍执行原生关闭。
+ * <p>本体 9.8 在该过程开头无条件关闭玩家容器；10.x 的 {@code closeContainer} 在转调后执行。
+ * 附属显式调用原生结算时（希望蛊开窍事务或选定资质），只有事务作用域内跳过这次关闭，
+ * 避免原生结算失败回滚后界面已经不可恢复；本体独立触发此过程时仍执行原生关闭。
  */
 @Mixin(value = UikongqiaoquedingProcedure.class, remap = false)
 public class UikongqiaoquedingProcedureMixin {

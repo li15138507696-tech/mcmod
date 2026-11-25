@@ -20,6 +20,7 @@ import net.minecraft.world.scores.ScoreHolder;
 import net.minecraft.advancements.AdvancementHolder;
 import net.minecraft.resources.ResourceLocation;
 import net.guzhenren.tianfu.v2.TianfuSelection;
+import net.guzhenren.tianfu.v2.TianfuInterlock;
 import net.guzhenren.tianfu.v2.TianfuV2Store;
 
 /**
@@ -29,9 +30,10 @@ import net.guzhenren.tianfu.v2.TianfuV2Store;
  * 仅要求先选开局难度。
  */
 public final class TianfuApply {
+    private static final String APTITUDE_SHACKLE = "v2_aptitude_shackled";
     /** Adapter owns both the immediate cost and lifelong constraint for these exact V2 IDs. */
     private static final Set<String> ADAPTER_HARD_COSTS = Set.of(
-            "v2_aptitude_shackled", "v2_luck_forfeit", "v2_lifespan_scar");
+            APTITUDE_SHACKLE, "v2_luck_forfeit", "v2_lifespan_scar");
     private TianfuApply() {
     }
 
@@ -70,8 +72,22 @@ public final class TianfuApply {
         if (!background.isEmpty()) {
             ids.add(TianfuTalents.ORIGIN_PREFIX + background);
         }
-        return ids;
+        // 互斥族的效果侧过滤（1.4.18）：旧存档里可能已同时持有多条同族天赋
+        // （当时没有互斥规则）。这些条目**仍留在账上**（可撤销、不可再购），
+        // 但只有同族中该生效的那一条产生效果。新档在 buy() 阶段就已被拦下，
+        // 走到这里的重复只会来自历史存档。
+        return TianfuInterlock.effective(ids, COST_LOOKUP);
     }
+
+    /** 互斥族 EXCLUSIVE 冲突时「保留哪一条」的判据：目录价最高者优先。 */
+    private static final TianfuInterlock.CostLookup COST_LOOKUP = id -> {
+        TianfuPool.Spec spec = TianfuPool.byId(id);
+        if (spec != null) {
+            return spec.cost();
+        }
+        TianfuTalents.Talent talent = TianfuTalents.byId(id);
+        return talent == null ? 0 : talent.cost();
+    };
 
     /** 已确认出身的类型 id；读 NBT 键，不碰 PlayerVariables，未知一律空串。 */
     private static String originBackground(Player player) {
@@ -109,6 +125,20 @@ public final class TianfuApply {
         if (!TianfuData.isApplied(player) || TianfuData.isConfirmed(player)) {
             return net.guzhenren.tianfu.v2.TianfuSelection.Rejection.LOCKED;
         }
+        // 主修门禁（1.4.18 / P1-1）：依赖「只加主修」的条目，主修未定或并列时不得购买。
+        // 必须在 Economy.buy 之前判断——buy 是纯函数，拿不到玩家，无法自己解析主修。
+        if (TianfuTalents.requiresMainDao(id)) {
+            PlayerVariables gate = player.getData(GuzhenrenModVariables.PLAYER_VARIABLES);
+            if (TianfuMainDao.of(player, gate).isEmpty()) {
+                return net.guzhenren.tianfu.v2.TianfuSelection.Rejection.NO_MAIN_DAO;
+            }
+        }
+        // 先补迁移再读快照（1.4.18 / P0-5）。
+        // 旧实现下 buyReason 不迁移，而 commit 曾把 SCHEMA 硬写成 2 —— 于是「没开界面就买」
+        // 会永久跳过迁移：旧档已购条目拿不到 Receipt，导致
+        //   a) 旧负面补点按 0 计算（24 点上限被抬高）；
+        //   b) 旧条目撤销时 LEGACY_PRICE_UNKNOWN，永久不可撤销、同族也不可替换。
+        net.guzhenren.tianfu.v2.TianfuV2Store.migrate(player);
         net.guzhenren.tianfu.v2.TianfuSelection.Snapshot snapshot =
                 net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
         net.guzhenren.tianfu.v2.TianfuSelection.Result result =
@@ -153,6 +183,8 @@ public final class TianfuApply {
                 || spec.kind() == net.guzhenren.tianfu.TianfuPool.Kind.JIYUAN)) {
             return false;
         }
+        // 同 buyReason：撤销也必须先迁移，否则旧档条目没有 Receipt 会拒绝原价退还（P0-5）。
+        net.guzhenren.tianfu.v2.TianfuV2Store.migrate(player);
         net.guzhenren.tianfu.v2.TianfuSelection.Snapshot snapshot =
                 net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
         net.guzhenren.tianfu.v2.TianfuSelection.Result result =
@@ -175,9 +207,13 @@ public final class TianfuApply {
 
     /** Compatibility entry for an already-confirmed third-party UI or legacy save. */
     public static void applyAllConfirmed(ServerPlayer player, boolean legacy) {
-        if (player == null || !TianfuData.isConfirmed(player)) return;
+        tryApplyAllConfirmed(player, legacy);
+    }
+
+    static TianfuSelection.Rejection tryApplyAllConfirmed(ServerPlayer player, boolean legacy) {
+        if (player == null || !TianfuData.isConfirmed(player)) return TianfuSelection.Rejection.LOCKED;
         TianfuV2Store.migrate(player);
-        settleSelection(player, legacy);
+        return settleSelection(player, legacy);
     }
 
     private static TianfuSelection.Rejection settleSelection(ServerPlayer player, boolean legacy) {
@@ -187,10 +223,19 @@ public final class TianfuApply {
         TianfuSelection.Snapshot snapshot = TianfuV2Store.read(player);
         if (TianfuDifficulty.byIndex(snapshot.difficulty()) == null) return TianfuSelection.Rejection.NO_DIFFICULTY;
         PlayerVariables vars = player.getData(GuzhenrenModVariables.PLAYER_VARIABLES);
-        boolean anchor = vars.kongqiao >= 1 && vars.kongqiao <= 10;
+        boolean hasAptitudeLock = snapshot.purchased().contains(APTITUDE_SHACKLE);
+        // 空窍桎梏本身也是一种结算根基：未选资质时按丁等锁定（见 applyBaseEffects）。
+        boolean anchor = vars.kongqiao >= 1 && vars.kongqiao <= 10 || hasAptitudeLock;
         int bodies = 0, sijues = 0, aptitudeTiers = 0;
         for (String id : snapshot.purchased()) {
-            if (!TianfuTalents.isAvailable(id)) return TianfuSelection.Rejection.UNVERIFIED_EFFECT;
+            if (id.startsWith(TianfuTalents.ORIGIN_PREFIX)) {
+                return TianfuSelection.Rejection.UNKNOWN_ID;
+            }
+            if (!TianfuTalents.isAvailable(id)
+                    && TianfuTalents.byIdIncludingUnavailable(id) == null
+                    && TianfuPool.byId(id) == null) {
+                return TianfuSelection.Rejection.UNKNOWN_ID;
+            }
             var spec = TianfuPool.byId(id);
             if (spec != null) {
                 if (spec.kind() == TianfuPool.Kind.BODY) bodies++;
@@ -202,8 +247,10 @@ public final class TianfuApply {
             anchor |= TianfuTalents.isAptitudeTier(id);
             if (TianfuTalents.isAptitudeTier(id)) aptitudeTiers++;
         }
-        // 体质只有本体 tizhi 一个槽位：凡体与十绝体合计最多一个。
-        if (!anchor || bodies + sijues > 1 || aptitudeTiers > 1 || aptitudeTiers > 0 && sijues > 0)
+        // 体质只有本体 tizhi 一个槽位：凡体与十绝体合计最多一个；空窍桎梏与四档资质、十绝体互斥。
+        if (!anchor || bodies + sijues > 1 || aptitudeTiers > 1
+                || aptitudeTiers > 0 && sijues > 0
+                || hasAptitudeLock && (aptitudeTiers > 0 || sijues > 0))
             return TianfuSelection.Rejection.CONFLICT;
         net.guzhenren.tianfu.v2.VersionAdapter adapter =
                 new net.guzhenren.tianfu.v2.NeoForge1211Adapter();
@@ -261,18 +308,49 @@ public final class TianfuApply {
         }
     }
 
+    /** 真实资质根基：本体 kongqiao 1–10，或已购资质档 / 十绝体 / 旧机缘。空窍桎梏不算。 */
+    private static boolean hasNonShackleAnchor(TianfuSelection.Snapshot snapshot, PlayerVariables vars) {
+        if (vars.kongqiao >= 1.0 && vars.kongqiao <= 10.0) return true;
+        for (String id : snapshot.purchased()) {
+            if (TianfuTalents.isAptitudeTier(id)) return true;
+            var spec = TianfuPool.byId(id);
+            if (spec != null && (spec.kind() == TianfuPool.Kind.SIJUE || spec.kind() == TianfuPool.Kind.JIYUAN))
+                return true;
+        }
+        return false;
+    }
+
     private static void applyBaseEffects(ServerPlayer player, PlayerVariables vars,
             TianfuSelection.Snapshot snapshot, boolean legacy) {
         Set<String> entries = new LinkedHashSet<>();
-        // Native grade may initialize destiny-dependent fields. Run it before physique/entry bonuses.
+        // 空窍桎梏在未选任何资质时也必须给出一个可结算的根基：
+        // 按丁等（kongqiao=8）锁定，而不是把 kongqiao 锁在 0 导致永久无法确认。
+        if (snapshot.purchased().contains(APTITUDE_SHACKLE) && !hasNonShackleAnchor(snapshot, vars)) {
+            TianfuNative.applyAptitudeTier(player, vars, 8);
+        }
+        // Native grade / sijue / jiyuan establish baseline native fields before cap snapshotting.
         for (String id : snapshot.purchased()) {
             var receipt = snapshot.receipts().get(id);
             boolean alreadyApplied = receipt != null && receipt.legacy()
                     && (legacy || !TianfuData.isDeferred(player));
-            if (!alreadyApplied && TianfuTalents.isAptitudeTier(id))
+            if (!alreadyApplied && TianfuTalents.isAptitudeTier(id)) {
                 TianfuTalents.applyOnce(player, vars, Set.of(id));
+            }
         }
-        // Apply native physique first, then entry multipliers, origin and finally hard constraints.
+        for (String id : snapshot.purchased()) {
+            var receipt = snapshot.receipts().get(id);
+            boolean alreadyApplied = receipt != null && receipt.legacy()
+                    && (legacy || !TianfuData.isDeferred(player));
+            var spec = TianfuPool.byId(id);
+            if (alreadyApplied || spec == null) continue;
+            if (spec.kind() == TianfuPool.Kind.SIJUE) {
+                TianfuNative.applySijue(player, vars, spec.tizhi());
+            } else if (spec.kind() == TianfuPool.Kind.JIYUAN && !legacy) {
+                TianfuNative.applyJiyuan(player, vars, id);
+            }
+        }
+        // 在体质/词条写入之前统一快照受上限约束字段的真实基值，避免体质的魂魄倍率或前序条目抬高基值。
+        Map<String, Double> capBase = TianfuTalents.snapshotCapped(vars);
         for (String id : snapshot.purchased()) {
             var receipt = snapshot.receipts().get(id);
             boolean alreadyApplied = receipt != null && receipt.legacy()
@@ -282,19 +360,17 @@ public final class TianfuApply {
             // These definitions also contain legacy FIELD_* display primitives. Running both
             // engines would deduct the scar's 400 lifespan twice; settle only in the adapter.
             if (ADAPTER_HARD_COSTS.contains(id)) continue;
-            if (spec == null || spec.kind() == TianfuPool.Kind.ENTRY) { entries.add(id); continue; }
-            switch (spec.kind()) {
-                case BODY -> {
-                    vars.tizhi = spec.tizhi();
-                    TianfuDaohen.write(vars, id);
-                    TianfuEffects.applyOnce(player, vars, Set.of(), spec.tizhi());
-                }
-                case SIJUE -> TianfuNative.applySijue(player, vars, spec.tizhi());
-                case JIYUAN -> { if (!legacy) TianfuNative.applyJiyuan(player, vars, id); }
-                default -> { }
+            if (spec == null || spec.kind() == TianfuPool.Kind.ENTRY) {
+                entries.add(id);
+                continue;
+            }
+            if (spec.kind() == TianfuPool.Kind.BODY) {
+                vars.tizhi = spec.tizhi();
+                TianfuDaohen.write(vars, id);
+                TianfuEffects.applyOnce(player, vars, Set.of(), spec.tizhi(), capBase);
             }
         }
-        TianfuEffects.applyOnce(player, vars, entries, 0);
+        TianfuEffects.applyOnce(player, vars, entries, 0, capBase);
     }
 
     private static Map<AdvancementHolder, Set<String>> snapshotNativeAwards(ServerPlayer player) {

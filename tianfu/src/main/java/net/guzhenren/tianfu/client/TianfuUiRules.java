@@ -24,8 +24,12 @@ public final class TianfuUiRules {
         }
         if(spec.kind()==TianfuPool.Kind.SIJUE&&ownsAptitudeTier)
             return new Decision(false,"已选择空窍档位，不能再选择十绝体",state.points());
+        if(spec.kind()==TianfuPool.Kind.SIJUE&&state.purchased().contains("v2_aptitude_shackled"))
+            return new Decision(false,"已选择空窍桎梏，本世资质锁定",state.points());
         if("v2_aptitude_shackled".equals(spec.id())&&ownsAptitudeTier)
             return new Decision(false,"已选择空窍档位，不能再锁定原资质",state.points());
+        if("v2_aptitude_shackled".equals(spec.id())&&ownsSijue)
+            return new Decision(false,"已选择十绝体，不能再锁定原资质",state.points());
         if(spec.kind()==TianfuPool.Kind.BODY||spec.kind()==TianfuPool.Kind.SIJUE) {
             for(String id:state.purchased()) {
                 var other=TianfuPool.byId(id);
@@ -49,6 +53,8 @@ public final class TianfuUiRules {
             case NO_DIFFICULTY->"请先选择开局难度";
             case INSUFFICIENT_POINTS->"点数不足；撤销负面也需扣回原补点";
             case NEGATIVE_CAP->"负面补点合计不能超过24点";
+            case NO_MAIN_DAO->"该条目只强化主修流派：请先确定主修（道途或 /tianfu maindao）";
+            case RETIRED->"该条目已下架，旧记录已按原价退款，不能再购买";
             case CONFLICT->"与已选条目冲突，或本项已选择";
             case LEGACY_PRICE_UNKNOWN->"缺少原成交记录，暂不能结算";
             case UNVERIFIED_EFFECT->"效果尚未通过验证";

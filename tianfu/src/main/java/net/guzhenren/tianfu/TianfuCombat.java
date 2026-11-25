@@ -36,8 +36,21 @@ public final class TianfuCombat {
     private static final long XUHUA_CD_TICKS = 100L;
     /** 暴击概率上限（50% 封顶，避免全暴击）。 */
     private static final double CRIT_CAP = 0.50;
-    /** 反伤递归保护：事件内调用 {@code hurt()} 会重入本处理器。 */
+    /** 暴击伤害倍数上限（1.4.18）：基础 ×2 + 各词条加成，合计不超过 ×4.5。 */
+    private static final double CRIT_DMG_CAP = 4.5;
+    /** 内部触发的二次伤害保护：避免反伤 / 烛火结算重入本事件处理器。 */
     private static final ThreadLocal<Boolean> IN_REFLECT = ThreadLocal.withInitial(() -> Boolean.FALSE);
+
+    /** 在屏蔽附属战斗乘区与触发钩子的上下文中执行内部二次伤害（如反伤 / 烛火爆发）。 */
+    static void runWithoutCombatHooks(Runnable action) {
+        Boolean prev = IN_REFLECT.get();
+        IN_REFLECT.set(Boolean.TRUE);
+        try {
+            action.run();
+        } finally {
+            IN_REFLECT.set(prev);
+        }
+    }
 
     // ---- 恶意联动（1.2.30）运行时状态 ----
     /** 恶意·反击：玩家上次被击中的 tick。 */
@@ -97,9 +110,6 @@ public final class TianfuCombat {
             if (TianfuTalents.counterBonus(ids) > 0.0) {
                 COUNTER_TICK.put(victim.getUUID(), victim.tickCount);
             }
-
-            // 恶意·不死：放在所有减伤/闪避之后，按最终伤害判定是否致命
-            tryUndying(victim, ids, event);
         }
 
         // ---- 出伤侧：条件阶梯 × 暴击 × 吸血 ----
@@ -182,9 +192,9 @@ public final class TianfuCombat {
 
         // 残血阶梯（从上到下，越残越狠）
         if (tizhi == 33) {
-            // 修罗战体：每损 10% 血 +5%（最多 5 档 = +25%）
+            // 修罗战体：每损 10% 血 +5%（最多 5 档 = +25%），血量高于上限时不扣伤
             double loss = 1.0 - hpRatio;
-            int steps = (int) Math.floor(loss * 10);
+            int steps = Math.max(0, (int) Math.floor(loss * 10));
             mult *= 1.0 + Math.min(steps, 5) * 0.05;
         }
         if (tizhi == 53 && hpRatio < 0.3F) {
@@ -240,22 +250,29 @@ public final class TianfuCombat {
         if (tizhi == 17 && hpRatio < 0.1F) {
             chance += 0.25;               // 九命不灭体：濒死 +25%
         }
-        if (tizhi == 37) {                // 太虚化形体：15% 虚化免伤，内置 5 秒 CD
-            long now = player.level().getGameTime();
-            long last = TianfuData.getLong(player, "xuhua_cd", player.tickCount - XUHUA_CD_TICKS);
-            if (now - last >= XUHUA_CD_TICKS) {
-                chance += 0.15;
-                TianfuData.putLong(player, "xuhua_cd", now);
-            }
-        }
         if (ids.contains("shen_tianji_suan")) {
             chance += 0.24;               // 神·天机神算 +24%
         }
         chance += TianfuTalents.dodge(ids);   // 扩展词条（闪步随风 / 身法系）
+
+        boolean xuhuaReady = false;
+        long xuhuaNow = 0L;
+        if (tizhi == 37 && chance < 0.6) { // 太虚化形体：15% 虚化免伤，内置 5 秒 CD（仅成功闪避才消耗）
+            xuhuaNow = player.level().getGameTime();
+            long last = TianfuData.getLong(player, "xuhua_cd", xuhuaNow - XUHUA_CD_TICKS);
+            if (xuhuaNow - last >= XUHUA_CD_TICKS) {
+                xuhuaReady = true;
+                chance += 0.15;
+            }
+        }
         if (chance <= 0.0) {
             return false;
         }
-        return player.getRandom().nextDouble() < Math.min(chance, 0.6);
+        boolean dodged = player.getRandom().nextDouble() < Math.min(chance, 0.6);
+        if (dodged && xuhuaReady) {
+            TianfuData.putLong(player, "xuhua_cd", xuhuaNow);
+        }
+        return dodged;
     }
 
     // ========================================= 新增战斗机制 =========================================
@@ -277,7 +294,9 @@ public final class TianfuCombat {
         if (ids.contains("jianbi_qingfeng")) mult += 0.30;
         if (ids.contains("shen_tianji_suan")) mult += 2.40;   // 神·天机神算：暴击 ×4.4
         mult += TianfuTalents.critDamage(ids);                // 扩展词条（暴伤如锋 / 暴击如神）
-        return mult;
+        // 1.4.18：暴伤封顶 ×4.5。此前无上限，`神·天机神算`(×4.4) 再叠 `暴击如神`(+1.20)
+        // 与 `暴伤如锋` 就能到 ×6 以上；封顶值略高于单条最强项，保证单买不被削。
+        return Math.min(CRIT_DMG_CAP, mult);
     }
 
     /** 吸血总比例（体质血煞蜕变 5% + 扩展词条 吸血入魔/吸血如饕，可叠加）。 */
@@ -303,12 +322,7 @@ public final class TianfuCombat {
         if (victim.getRandom().nextDouble() >= chance) return;
         float original = event.getAmount();
         float reflected = (float) (original * ratio);
-        IN_REFLECT.set(Boolean.TRUE);
-        try {
-            attacker.hurt(victim.damageSources().thorns(victim), reflected);
-        } finally {
-            IN_REFLECT.set(Boolean.FALSE);
-        }
+        runWithoutCombatHooks(() -> attacker.hurt(victim.damageSources().thorns(victim), reflected));
     }
 
     // ------------------------------------------------------------------ 恶意联动（1.2.30）
@@ -325,12 +339,13 @@ public final class TianfuCombat {
         if (stacks.size() > 16) {
             stacks.clear();   // 防止记忆表随伤害类型无限膨胀
         }
-        int cur = stacks.merge(key, 1, Integer::sum);
-        if (cur > cap) {
-            cur = cap;
-            stacks.put(key, cap);
-        }
-        event.setAmount((float) (event.getAmount() * (1.0 - per * cur)));
+        int cur = stacks.getOrDefault(key, 0);
+        // 1.4.18：先按**已有层数**减免，再叠一层。旧实现是 `merge` 之后才取 cur，
+        // 于是第一次被同类伤害就已经吃到 1 层减免（「首击即叠层」），第二次起变成 2 层。
+        // 现在第 N 次命中只吃 N-1 层。
+        int used = Math.min(cap, Math.max(0, cur));
+        stacks.put(key, Math.min(cap, cur + 1));
+        event.setAmount((float) (event.getAmount() * (1.0 - per * used)));
     }
 
     /** 恶意·反击：被击中后的短时出伤加成。 */
@@ -347,10 +362,17 @@ public final class TianfuCombat {
         return player.tickCount - last <= window ? 1.0 + bonus : 1.0;
     }
 
-    /** 恶意·不死：致命伤害改为「留 1 血 + 回血」，带冷却。 */
-    private static void tryUndying(ServerPlayer victim, Set<String> ids, LivingIncomingDamageEvent event) {
+    /** 恶意·不死：在所有护甲/附魔/抗性/暴击结算后于 LivingDeathEvent(HIGH) 触发免死并回血，带冷却。 */
+    public static void onDeathUndying(net.neoforged.neoforge.event.entity.living.LivingDeathEvent event) {
+        if (!(event.getEntity() instanceof ServerPlayer victim)) {
+            return;
+        }
+        if (event.getSource().is(DamageTypeTags.BYPASSES_INVULNERABILITY)) {
+            return;
+        }
+        Set<String> ids = TianfuApply.effective(victim);
         double[] und = TianfuTalents.undying(ids);
-        if (und == null || event.getAmount() < victim.getHealth()) {
+        if (und == null) {
             return;
         }
         long now = victim.level().getGameTime();
@@ -359,10 +381,19 @@ public final class TianfuCombat {
             return;
         }
         data.putLong(TAG_UNDYING_READY, now + (long) und[1]);
-        event.setAmount(Math.max(0.0F, victim.getHealth() - 1.0F));
-        victim.heal((float) (victim.getMaxHealth() * und[0]));
+        event.setCanceled(true);
+        float targetHp = Math.min(victim.getMaxHealth(),
+                Math.max(1.0F, 1.0F + (float) (victim.getMaxHealth() * und[0])));
+        victim.setHealth(targetHp);
         victim.displayClientMessage(
                 net.minecraft.network.chat.Component.literal("§d[天赋] 不死之身：免于一死"), true);
+    }
+
+    /** 清空恶意·不死冷却（转世重置时调用）。 */
+    public static void clearUndyingCooldown(ServerPlayer player) {
+        if (player != null) {
+            player.getPersistentData().remove(TAG_UNDYING_READY);
+        }
     }
 
     /** Ordinary respawns preserve the cooldown; a wiped new life starts fresh. */

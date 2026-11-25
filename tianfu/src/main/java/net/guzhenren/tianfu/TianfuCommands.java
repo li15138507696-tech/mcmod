@@ -47,7 +47,58 @@ public final class TianfuCommands {
                                 !TianfuData.vfxEnabled(ctx.getSource().getPlayerOrException()))))
                 // 不按键打开界面 + 诊断
                 .then(Commands.literal("open").executes(TianfuCommands::open))
-                .then(Commands.literal("打开").executes(TianfuCommands::open)));
+                .then(Commands.literal("打开").executes(TianfuCommands::open))
+                // 主修流派（1.4.18）：「神·主道归宗 / 极·主道至尊」只强化当前主修，
+                // 主修未定或并列最高时不允许购买，因此需要一个显式设置入口。
+                .then(Commands.literal("maindao")
+                        .then(Commands.argument("流派", com.mojang.brigadier.arguments.StringArgumentType
+                                        .word())
+                                .suggests((ctx, builder) -> {
+                                    for (String key : TianfuMainDao.KEYS) {
+                                        builder.suggest(key);
+                                    }
+                                    return builder.buildFuture();
+                                })
+                                .executes(TianfuCommands::setMainDao))
+                        .executes(TianfuCommands::showMainDao)));
+    }
+
+    /** 设置主修流派。 */
+    private static int setMainDao(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        String key = com.mojang.brigadier.arguments.StringArgumentType.getString(ctx, "流派");
+        if (!TianfuMainDao.set(player, key)) {
+            player.displayClientMessage(Component.literal(
+                    "[天赋] 无法设为主修：" + key + "（必须是 15 项主修候选之一：" +
+                            String.join(" / ", TianfuMainDao.KEYS) + "）"), false);
+            return 0;
+        }
+        player.displayClientMessage(Component.literal(
+                "[天赋] 主修已设置为 " + key + "。此后「神·主道归宗 / 极·主道至尊」只强化这一路；"
+                        + "换主修不会回滚已写入的道痕。"), false);
+        return 1;
+    }
+
+    /** 显示当前主修与来源。 */
+    private static int showMainDao(CommandContext<CommandSourceStack> ctx)
+            throws CommandSyntaxException {
+        ServerPlayer player = ctx.getSource().getPlayerOrException();
+        var vars = player.getData(net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES);
+        String own = TianfuMainDao.recorded(player);
+        String daotu = TianfuMainDao.fromDaotu(player);
+        String resolved = TianfuMainDao.of(player, vars);
+        StringBuilder sb = new StringBuilder("[天赋] 主修：");
+        if (resolved.isEmpty()) {
+            sb.append("未确定（熟练度最高值并列或全为 0）。请用 /tianfu maindao <流派> 指定。");
+        } else {
+            sb.append(resolved).append("（来源：")
+                    .append(!own.isEmpty() ? "本模组记录"
+                            : !daotu.isEmpty() ? "道途" : "熟练度唯一最高")
+                    .append("）");
+        }
+        player.displayClientMessage(Component.literal(sb.toString()), false);
+        return 1;
     }
 
     /**

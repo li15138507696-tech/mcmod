@@ -14,7 +14,8 @@ import net.minecraft.world.entity.player.Player;
  * 属性类效果统一走 AttributeModifier：百分比用 ADD_MULTIPLIED_TOTAL 乘区，固定值用 ADD_VALUE。
  *
  * <p>刻意避开 {@code ARMOR}（本体把护甲钳在 0–30），减伤改由 {@link TianfuCombat} 自管乘区实现。
- * 使用 transient 修正：不写入玩家 NBT，登录 / 结算时用 {@link #sync} 幂等重建，避免重复叠加。
+ * 使用固定 ID 的 permanent 修正：登录读档、跨维度克隆与重生前都不会因临时修饰符缺失把生命截断回 20 HP，
+ * 每次 {@link #sync} 按需覆写/移除，保持幂等且不重复叠加。
  */
 public final class TianfuAttributes {
     private static final ResourceLocation HEALTH_MULT = id("body_health_mult");
@@ -64,6 +65,11 @@ public final class TianfuAttributes {
         attack *= talent.attackMult();
         speed *= talent.speedMult();
 
+        // 1.4.18：生命上限**总倍数封顶**。这里是所有生命来源的唯一合成点
+        // （池内不灭金身 ×2.0 / 筋骨强健 ×1.1 + 扩展词条裸连乘），
+        // 不封顶时四条叠乘可达 6.6×。封顶值 4.0× 保留单条最强项（万世不灭 ×2.5）不被削。
+        health = Math.min(TianfuTalents.HEALTH_CAP, health);
+
         apply(player, Attributes.MAX_HEALTH, HEALTH_MULT, health - 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         apply(player, Attributes.ATTACK_DAMAGE, ATTACK_MULT, attack - 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
         apply(player, Attributes.MOVEMENT_SPEED, SPEED_MULT, speed - 1.0, AttributeModifier.Operation.ADD_MULTIPLIED_TOTAL);
@@ -96,10 +102,6 @@ public final class TianfuAttributes {
             return;
         }
         AttributeModifier modifier = new AttributeModifier(id, amount, operation);
-        if (existing == null) {
-            instance.addTransientModifier(modifier);
-        } else {
-            instance.addOrUpdateTransientModifier(modifier);
-        }
+        instance.addOrReplacePermanentModifier(modifier);
     }
 }

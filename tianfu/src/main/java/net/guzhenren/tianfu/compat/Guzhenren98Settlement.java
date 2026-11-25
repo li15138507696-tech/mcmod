@@ -1,6 +1,6 @@
 package net.guzhenren.tianfu.compat;
 
-/** Final-balance rules: never manufacture lifespan to evade native 9.8 death/reset. */
+/** Final-balance rules: never manufacture lifespan to evade native death/reset. */
 public final class Guzhenren98Settlement {
     private Guzhenren98Settlement() { }
 
@@ -18,7 +18,7 @@ public final class Guzhenren98Settlement {
             case 4 -> 1;
             case 6 -> 5;
             case 8 -> 8;
-            default -> throw new IllegalArgumentException("不支持的 9.8 空窍档位: " + selected);
+            default -> throw new IllegalArgumentException("不支持的本体空窍档位: " + selected);
         };
     }
 }

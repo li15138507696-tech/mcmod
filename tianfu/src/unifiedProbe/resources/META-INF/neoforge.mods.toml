@@ -1,0 +1,31 @@
+modLoader="javafml"
+loaderVersion="[4,)"
+license="All Rights Reserved"
+[[mods]]
+modId="unified_probe"
+version="1.0.0"
+displayName="Unified Cross-Version Server Integration Probe"
+[[dependencies.unified_probe]]
+modId="neoforge"
+type="required"
+versionRange="[21.1.232,)"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.unified_probe]]
+modId="guzhenren"
+type="required"
+versionRange="[0.1,)"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.unified_probe]]
+modId="tianfu"
+type="required"
+versionRange="[1.5.0,)"
+ordering="AFTER"
+side="SERVER"
+[[dependencies.unified_probe]]
+modId="daotu"
+type="required"
+versionRange="[1.7.2,)"
+ordering="AFTER"
+side="SERVER"

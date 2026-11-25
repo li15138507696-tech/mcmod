@@ -317,8 +317,11 @@ public final class TianfuData {
         // netCost 只作兼容参数：整批价格与 24 限额一律由服务端重新核算。
         net.guzhenren.tianfu.v2.TianfuSelection.Snapshot snapshot =
                 net.guzhenren.tianfu.v2.TianfuV2Store.read(player);
+        boolean hasMainDao = player instanceof net.minecraft.server.level.ServerPlayer sp
+                && !TianfuMainDao.of(
+                        sp, sp.getData(net.guzhenren.network.GuzhenrenModVariables.PLAYER_VARIABLES)).isEmpty();
         net.guzhenren.tianfu.v2.TianfuSelection.Result result =
-                net.guzhenren.tianfu.v2.TianfuEconomy.acceptRoll(snapshot, ids);
+                net.guzhenren.tianfu.v2.TianfuEconomy.acceptRoll(snapshot, ids, hasMainDao);
         if (!result.ok()) {
             return false;
         }
@@ -446,5 +449,19 @@ public final class TianfuData {
 
     public static void putDouble(Player player, String key, double value) {
         update(player, tag -> tag.putDouble(key, value));
+    }
+
+    /** 通用 string 读写（主修流派键、道痕主修落点记录等）。 */
+    public static String getString(Player player, String key, String fallback) {
+        CompoundTag tag = root(player, false);
+        return tag == null || !tag.contains(key, Tag.TAG_STRING) ? fallback : tag.getString(key);
+    }
+
+    public static void putString(Player player, String key, String value) {
+        update(player, tag -> tag.putString(key, value));
+    }
+
+    public static void removeKey(Player player, String key) {
+        update(player, tag -> tag.remove(key));
     }
 }

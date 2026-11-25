@@ -105,7 +105,7 @@ public final class TianfuOriginTable {
                     "暴击率 +6%\n闪避 +4%\n山里长大，知道要害在哪"),
             new Background("apprentice", "蛊师学徒", 2, 0, 0.20, 0,
                     List.of(fx(TianfuTalents.Op.GU_CD, 0.15)),
-                    "炼蛊进度 +20%\n蛊冷却每 tick −0.15\n师父领进门"),
+                    "炼蛊进度 +20%\n蛊冷却时长 −13%\n师父领进门"),
             new Background("herbalist", "药童", 2, 0, 0, 0,
                     List.of(fx(TianfuTalents.Op.REGEN_HP_5S, 0.02),
                             fx(TianfuTalents.Op.XIULIAN, 0.10)),

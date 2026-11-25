@@ -63,6 +63,9 @@ public record TianfuBuyPayload(String id) implements CustomPacketPayload {
                     + "体质（凡体/十绝体）只能选一个，资质档位（丁/丙/乙/甲）与十绝体只能选一个，"
                     + "空窍桎梏不能与资质档位同选";
             case "NEGATIVE_CAP" -> "负面补点已达上限 24 点，不能再选负面天赋";
+            case "NO_MAIN_DAO" -> name + " 只强化「当前主修流派」：请先确定主修"
+                    + "（道途里选，或 /tianfu maindao <流派>），主修未定或并列最高时不能购买";
+            case "RETIRED" -> name + " 已于 1.4.18 下架，旧购买记录已按原价退还点数，不能再购买";
             case "LOCKED" -> "本世已最终确认，不能再改";
             case "NO_DIFFICULTY" -> "请先选择开局难度";
             case "UNKNOWN_ID" -> name + " 当前不可购买";

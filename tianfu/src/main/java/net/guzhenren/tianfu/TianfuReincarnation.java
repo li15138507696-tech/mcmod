@@ -37,6 +37,8 @@ public final class TianfuReincarnation {
         }
         TianfuData.incrementGeneration(player);
         TianfuData.wipeAll(player);
+        TianfuCombat.clearUndyingCooldown(player);
+        TianfuEffects.forget(player.getUUID());
         TianfuData.setVfxEnabled(player, before.vfxEnabled());
         try {
             TianfuAttributes.sync(player);

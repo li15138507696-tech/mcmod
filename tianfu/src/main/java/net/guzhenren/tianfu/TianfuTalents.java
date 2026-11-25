@@ -37,15 +37,12 @@ import net.minecraft.world.effect.MobEffects;
  * 字段名经 javap 实测，本体确实混用 {@code daohen_} 与 {@code dahen_} 两套前缀；走反射以规避拼写风险。
  */
 public final class TianfuTalents {
-    private static final java.util.Map<String, String> NATIVE_UNAVAILABLE = new java.util.concurrent.ConcurrentHashMap<>(Map.of(
-            "zhenyuan_ninglian", "本体 9.8 未提供统一真元扣费入口，尚不能完整兑现降耗；仅保留旧记录",
-            "niantou_ninglian", "本体 9.8 未提供统一念头扣费入口，尚不能完整兑现降耗；仅保留旧记录",
-            "shazhao_tiancheng", "杀招成功率与槽位磨损尚无完整的 9.8 钩子；仅保留旧记录"));
+    private static final java.util.Map<String, String> NATIVE_UNAVAILABLE = new java.util.concurrent.ConcurrentHashMap<>();
     /** 效果原语。 */
     public enum Op {
         HEALTH_MULT, ATTACK_MULT, SPEED_MULT, ATTACK_SPEED_MULT,
         JUMP_FLAT, KNOCKBACK_FLAT, FALL_FLAT,
-        MOB_EFFECT, FIELD_MULT, FIELD_ADD, DAOHEN, DAOHEN_ALL,
+        MOB_EFFECT, FIELD_MULT, FIELD_ADD, DAOHEN, DAOHEN_ALL, DAOHEN_MAIN,
         REGEN_HP_5S, REGEN_ZY, REGEN_NT, XIULIAN, BREAKTHROUGH, LIANGU, GU_CD, SHAZHAO_CD,
         CRIT_CHANCE, CRIT_DAMAGE, DODGE, LEECH, REDUCTION, REFLECT, OUT_FULL, OUT_LOW,
         // ---- 恶意联动（1.2.30）：出伤附带 / 同类记忆减伤 / 受击后强化 / 免死 / 光环 ----
@@ -143,18 +140,18 @@ public final class TianfuTalents {
             //   真元 800–999 → 2（甲）／600–799 → 1（乙）／400–599 → 5（丙）／200–399 → 不匹配（保持 8 = 丁）
             // 所以描述里写的是「最终」档位值，不是这里的初值——初值会被覆盖，
             // 曾因此让玩家以为「买了丙等却显示 5、跟描述写的 6 不符」。
-            t("v2_apt_ding", "丁等空窍", "黄", 1, "丁等空窍，真元上限 200–390，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 8)),
-            t("v2_apt_bing", "丙等空窍", "玄", 3, "丙等空窍，真元上限 400–590，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 6)),
-            t("v2_apt_yi", "乙等空窍", "地", 6, "乙等空窍，真元上限 600–790，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 4)),
-            t("v2_apt_jia", "甲等空窍", "天", 10, "甲等空窍，真元上限 800–990，沿用本体 9.8 的气运与命格结算", f(Op.APTITUDE_SET, 2)),
+            t("v2_apt_ding", "丁等空窍", "黄", 1, "丁等空窍，真元上限 200–390，沿用本体原生的气运与命格结算", f(Op.APTITUDE_SET, 8)),
+            t("v2_apt_bing", "丙等空窍", "玄", 3, "丙等空窍，真元上限 400–590，沿用本体原生的气运与命格结算", f(Op.APTITUDE_SET, 6)),
+            t("v2_apt_yi", "乙等空窍", "地", 6, "乙等空窍，真元上限 600–790，沿用本体原生的气运与命格结算", f(Op.APTITUDE_SET, 4)),
+            t("v2_apt_jia", "甲等空窍", "天", 10, "甲等空窍，真元上限 800–990，沿用本体原生的气运与命格结算", f(Op.APTITUDE_SET, 2)),
             t("v2_jingli_buji", "精力不济", "负", -2, "精力上限 −20%", fld("zuida_jingli", -0.20)),
-            t("v2_gu_cd_ningse", "催蛊凝涩", "负", -2, "蛊冷却每 tick 额外增加 0.10，仅对正在冷却的蛊", f(Op.GU_CD, -0.10)),
+            t("v2_gu_cd_ningse", "催蛊凝涩", "负", -2, "蛊冷却时长 +11.1%（仅对正在冷却的蛊）", f(Op.GU_CD, -0.10)),
             t("v2_zhenyuan_kubai", "真元枯败", "负", -5, "真元回复 −75%（旧 −30% 的 2.5 倍）", f(Op.REGEN_ZY, -0.75)),
             t("v2_routi_canque", "肉体残缺", "负", -5, "生命上限 −50%（旧 −20% 的 2.5 倍）", f(Op.HEALTH_MULT, -0.50)),
             t("v2_shouyuan_kuwei", "寿元枯萎", "负", -5, "寿元 −250（旧 −100 的 2.5 倍，确认前显示致死风险）", fldAdd("shouyuan", -250)),
             t("v2_qiyun_duanjue", "气运断绝", "负", -5, "基础气运上限 −37.5%（旧 −15% 的 2.5 倍）", fld("qiyun_shangxian", -0.375)),
             t("v2_xinzhi_yousun", "心智有损", "负", -5, "修炼速度 −40%、本体突破失败概率提高 50%", f(Op.XIULIAN, -0.40), f(Op.BREAKTHROUGH, -0.50)),
-            t("v2_aptitude_shackled", "空窍桎梏", "负", -8, "本世锁定确认时原有资质；念头容量 −100%，不允许后续机缘或十绝体突破锁定", f(Op.V2_APTITUDE_LOCK, 1), fld("niantou_rongliang", -1.0)),
+            t("v2_aptitude_shackled", "空窍桎梏", "负", -8, "本世锁定确认时资质（未选资质则按丁等锁定）；念头容量 −100%，不允许后续机缘或十绝体突破锁定；撤销需返还 8 点", f(Op.V2_APTITUDE_LOCK, 1), fld("niantou_rongliang", -1.0)),
             t("v2_luck_forfeit", "天弃之命", "负", -8, "本世气运与气运上限持续为 0；气运增益不能抵消，约四倍量级并附不可补回代价", f(Op.V2_LUCK_ZERO, 1)),
             t("v2_lifespan_scar", "命烛残尽", "负", -8, "确认时寿元 −400，且本世寿元恢复与增加无效；寿元不足不得确认", fldAdd("shouyuan", -400), f(Op.V2_LIFESPAN_SCAR, 1)),
             t("v2_mind_xiulian_1", "修炼速度 I", "玄", 2, "+20%", f(Op.XIULIAN, 0.20)),
@@ -167,49 +164,47 @@ public final class TianfuTalents {
             t("v2_mind_recovery_2", "念头恢复 II", "地", 3, "+40%", f(Op.REGEN_NT, 0.40)),
             t("v2_mind_liangu_1", "炼蛊进度 I", "玄", 2, "+15%", f(Op.LIANGU, 0.15)),
             t("v2_mind_liangu_2", "炼蛊进度 II", "地", 3, "+30%", f(Op.LIANGU, 0.30)),
-            t("v2_mind_cooldown_1", "蛊冷却 I", "玄", 2, "每 tick −0.15", f(Op.GU_CD, 0.15)),
-            t("v2_mind_cooldown_2", "蛊冷却 II", "地", 3, "每 tick −0.25", f(Op.GU_CD, 0.25)),
+            t("v2_mind_cooldown_1", "蛊冷却 I", "玄", 2, "蛊冷却时长 −13%", f(Op.GU_CD, 0.15)),
+            t("v2_mind_cooldown_2", "蛊冷却 II", "地", 3, "蛊冷却时长 −20%", f(Op.GU_CD, 0.25)),
 
             // 新增 15 条：字段拼写来自 _ref/player-variables-fields.txt；不合并 dahen_/daohen_。
             // 黄/玄/地/天成本分别为 1/2/3/5；数值为本次设计，不冒充知识库规定值。
-            t("yudao_qinhe", "宇道亲和", "黄", 1, "宇道道痕 +200；熟练度效率 +20%，不直接增伤", dao("daohen_yudao", 200)),
-            t("qidao_qinhe", "气道亲和", "黄", 1, "气道道痕 +200；熟练度效率 +20%，不直接增伤", dao("dahen_qidao", 200)),
-            t("lvdao_qinhe", "律道亲和", "黄", 1, "律道道痕 +200；熟练度效率 +20%，不提供全流派增伤", dao("daohen_lvdao", 200)),
-            t("toudao_qinhe", "偷道亲和", "黄", 1, "偷道道痕 +200；熟练度效率 +20%，不直接增伤", dao("daohen_toudao", 200)),
-            t("nudao_qinhe", "奴道亲和", "黄", 1, "奴道道痕 +200；熟练度效率 +20%，不直接增伤", dao("dahen_nudao", 200)),
+            t("yudao_qinhe", "宇道亲和", "黄", 1, "宇道道痕 +200；熟练度 +20（不直接增伤）", dao("daohen_yudao", 200)),
+            t("qidao_qinhe", "气道亲和", "黄", 1, "气道道痕 +200；熟练度 +20（不直接增伤）", dao("dahen_qidao", 200)),
+            t("lvdao_qinhe", "律道亲和", "黄", 1, "律道道痕 +200；熟练度 +20，不提供全流派增伤", dao("daohen_lvdao", 200)),
+            t("toudao_qinhe", "偷道亲和", "黄", 1, "偷道道痕 +200；熟练度 +20（不直接增伤）", dao("daohen_toudao", 200)),
+            t("nudao_qinhe", "奴道亲和", "黄", 1, "奴道道痕 +200；熟练度 +20（不直接增伤）", dao("dahen_nudao", 200)),
             t("huadao_qinhe", "化道亲和", "黄", 1, "化道字段道痕 +200；与变化道字段独立，不直接增伤", dao("daohen_huadao", 200)),
-            t("andao_qinhe", "暗道亲和", "黄", 1, "暗道道痕 +200；熟练度效率 +20%，与影道独立", dao("daohen_andao", 200)),
-            t("shidao_qinhe", "食道亲和", "玄", 2, "食道道痕 +500；熟练度效率 +50%，不直接增伤", dao("daohen_shidao", 500)),
-            t("xindao_qinhe", "心道亲和", "玄", 2, "心道字段道痕 +500；不直接增伤", dao("daohen_xindao", 500)),
-            t("yundao_qinhe", "运道亲和", "玄", 2, "运道字段道痕 +500；不直接修改气运或其上限", dao("daohen_yundao", 500)),
-            t("yundao2_jinjie", "云运支系进阶", "玄", 2, "yundao2 道痕 +500；支系名称待核，不等同气运", dao("daohen_yundao2", 500)),
-            t("jindao2_jinjie", "金道支系进阶", "玄", 2, "jindao2 道痕 +500；与 jindao 字段独立，支系名称待核", dao("daohen_jindao2", 500)),
-            t("rendao_dacheng", "人道大成", "地", 3, "人道道痕 +800；熟练度效率 +80%，不直接等同人气", dao("dahen_rendao", 800)),
-            t("tiandao_daocang", "天道道藏", "天", 5, "天道字段道痕 +1200；不提供全局增伤", dao("dahen_tiandao", 1200)),
-            // 总道痕是汇总字段：仅用 FIELD_ADD，不伪造 liupai_zong，也不宣称其为第45个流派。
-            t("zonghen_chubei", "总痕储备", "天", 5, "总道痕汇总字段 +300；不增加各流派道痕或伤害", fldAdd("daohen_zong", 300)),
+            t("andao_qinhe", "暗道亲和", "黄", 1, "暗道道痕 +200；熟练度 +20，与影道独立", dao("daohen_andao", 200)),
+            t("shidao_qinhe", "食道亲和", "玄", 3, "食道道痕 +500；熟练度 +50（不直接增伤）", dao("daohen_shidao", 500)),
+            t("xindao_qinhe", "心道亲和", "玄", 3, "心道字段道痕 +500；不直接增伤", dao("daohen_xindao", 500)),
+            t("yundao_qinhe", "运道亲和", "玄", 3, "运道字段道痕 +500；不直接修改气运或其上限", dao("daohen_yundao", 500)),
+            t("yundao2_jinjie", "云运支系进阶", "玄", 3, "yundao2 道痕 +500；支系名称待核，不等同气运", dao("daohen_yundao2", 500)),
+            t("jindao2_jinjie", "金道支系进阶", "玄", 3, "jindao2 道痕 +500；与 jindao 字段独立，支系名称待核", dao("daohen_jindao2", 500)),
+            t("rendao_dacheng", "人道大成", "地", 4, "人道道痕 +800；熟练度 +80，不直接等同人气", dao("dahen_rendao", 800)),
+            t("tiandao_daocang", "天道道藏", "天", 6, "天道字段道痕 +1200；不提供全局增伤", dao("dahen_tiandao", 1200)),
 
             // ---- 黄（1 点）：20 条流派亲和 + 5 条入门（已筛除夜视/跳跃/饱和/摔落/水下呼吸等鸡肋条目） ----
-            t("jiandao_qinhe", "剑道亲和", "黄", 1, "剑道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_jiandao", 200)),
-            t("leidao_qinhe", "雷道亲和", "黄", 1, "雷道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_leidao", 200)),
-            t("yandao_qinhe", "炎道亲和", "黄", 1, "炎道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_yandao", 200)),
-            t("bingxuedao_qinhe", "冰雪道亲和", "黄", 1, "冰雪道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_bingxuedao", 200)),
-            t("fengdao_qinhe", "风道亲和", "黄", 1, "风道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_fengdao", 200)),
-            t("yingdao_qinhe", "影道亲和", "黄", 1, "影道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_yingdao", 200)),
-            t("yuedao_qinhe", "月道亲和", "黄", 1, "月道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_yuedao", 200)),
-            t("shuidao_qinhe", "水道亲和", "黄", 1, "水道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_shuidao", 200)),
-            t("tudao_qinhe", "土道亲和", "黄", 1, "土道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_tudao", 200)),
-            t("mudao_qinhe", "木道亲和", "黄", 1, "木道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_mudao", 200)),
-            t("jindao_qinhe", "金道亲和", "黄", 1, "金道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_jindao", 200)),
-            t("gudao_qinhe", "骨道亲和", "黄", 1, "骨道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_gudao", 200)),
-            t("lidao_qinhe", "力道亲和", "黄", 1, "力道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_lidao", 200)),
-            t("hundao_qinhe", "魂道亲和", "黄", 1, "魂道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_hundao", 200)),
-            t("xuedao_qinhe", "血道亲和", "黄", 1, "血道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_xuedao", 200)),
-            t("xudao_qinhe", "虚道亲和", "黄", 1, "虚道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_xudao", 200)),
-            t("zhidao_qinhe", "智道亲和", "黄", 1, "智道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("dahen_zhidao", 200)),
-            t("zhoudao_qinhe", "宙道亲和", "黄", 1, "宙道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("dahen_zhoudao", 200)),
-            t("mengdao_qinhe", "梦道亲和", "黄", 1, "梦道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_mengdao", 200)),
-            t("dudao_qinhe", "毒道亲和", "黄", 1, "毒道道痕 +200；该流派熟练度效率 +20%，不直接增伤", dao("daohen_dudao", 200)),
+            t("jiandao_qinhe", "剑道亲和", "黄", 1, "剑道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_jiandao", 200)),
+            t("leidao_qinhe", "雷道亲和", "黄", 1, "雷道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_leidao", 200)),
+            t("yandao_qinhe", "炎道亲和", "黄", 1, "炎道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_yandao", 200)),
+            t("bingxuedao_qinhe", "冰雪道亲和", "黄", 1, "冰雪道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_bingxuedao", 200)),
+            t("fengdao_qinhe", "风道亲和", "黄", 1, "风道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_fengdao", 200)),
+            t("yingdao_qinhe", "影道亲和", "黄", 1, "影道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_yingdao", 200)),
+            t("yuedao_qinhe", "月道亲和", "黄", 1, "月道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_yuedao", 200)),
+            t("shuidao_qinhe", "水道亲和", "黄", 1, "水道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_shuidao", 200)),
+            t("tudao_qinhe", "土道亲和", "黄", 1, "土道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_tudao", 200)),
+            t("mudao_qinhe", "木道亲和", "黄", 1, "木道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_mudao", 200)),
+            t("jindao_qinhe", "金道亲和", "黄", 1, "金道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_jindao", 200)),
+            t("gudao_qinhe", "骨道亲和", "黄", 1, "骨道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_gudao", 200)),
+            t("lidao_qinhe", "力道亲和", "黄", 1, "力道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_lidao", 200)),
+            t("hundao_qinhe", "魂道亲和", "黄", 1, "魂道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_hundao", 200)),
+            t("xuedao_qinhe", "血道亲和", "黄", 1, "血道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_xuedao", 200)),
+            t("xudao_qinhe", "虚道亲和", "黄", 1, "虚道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_xudao", 200)),
+            t("zhidao_qinhe", "智道亲和", "黄", 1, "智道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("dahen_zhidao", 200)),
+            t("zhoudao_qinhe", "宙道亲和", "黄", 1, "宙道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("dahen_zhoudao", 200)),
+            t("mengdao_qinhe", "梦道亲和", "黄", 1, "梦道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_mengdao", 200)),
+            t("dudao_qinhe", "毒道亲和", "黄", 1, "毒道道痕 +200；该流派熟练度 +20（不直接增伤）", dao("daohen_dudao", 200)),
             t("tiepi_rougu", "铁皮肉骨", "黄", 1, "非护甲减伤 +4%", f(Op.REDUCTION, 0.04)),
             t("bufen_zhiwu", "不焚之物", "黄", 1, "常驻防火", mob("fire_resistance", 0)),
             t("shenfa_qingjie", "身法轻捷", "黄", 1, "移动速度 +5%", f(Op.SPEED_MULT, 0.05)),
@@ -217,17 +212,17 @@ public final class TianfuTalents {
             t("niantou_zisheng", "念头自生", "黄", 1, "念头回复 +20%", f(Op.REGEN_NT, 0.20)),
 
             // ---- 玄（2 点）：10 条流派亲和 + 15 条进阶（已筛除跳跃强度/急迫/缓降/海豚恩惠等鸡肋条目） ----
-            t("bingdao_qinhe", "兵道亲和", "玄", 2, "兵道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_bingdao", 500)),
-            t("daodao_qinhe", "刀道亲和", "玄", 2, "刀道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_daodao", 500)),
-            t("guangdao_qinhe", "光道亲和", "玄", 2, "光道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_guangdao", 500)),
-            t("xingdao_qinhe", "星道亲和", "玄", 2, "星道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("dahen_xingdao", 500)),
-            t("dandao_qinhe", "丹道亲和", "玄", 2, "丹道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_dandao", 500)),
-            t("liandao_qinhe", "炼道亲和", "玄", 2, "炼道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("dahen_liandao", 500)),
-            t("yindao_qinhe", "音道亲和", "玄", 2, "音道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_yindao", 500)),
-            t("huandao_qinhe", "幻道亲和", "玄", 2, "幻道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_huandao", 500)),
-            t("bianhuadao_qinhe", "变化道亲和", "玄", 2, "变化道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("daohen_bianhuadao", 500)),
-            t("zhendao_qinhe", "阵道亲和", "玄", 2, "阵道道痕 +500；该流派熟练度效率 +50%，不直接增伤", dao("dahen_zhendao", 500)),
-            t("wuying_bi", "无影壁", "玄", 2, "受击 6% 概率反弹 12% 伤害", reflect(0.06, 0.12)),
+            t("bingdao_qinhe", "兵道亲和", "玄", 3, "兵道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_bingdao", 500)),
+            t("daodao_qinhe", "刀道亲和", "玄", 3, "刀道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_daodao", 500)),
+            t("guangdao_qinhe", "光道亲和", "玄", 3, "光道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_guangdao", 500)),
+            t("xingdao_qinhe", "星道亲和", "玄", 3, "星道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("dahen_xingdao", 500)),
+            t("dandao_qinhe", "丹道亲和", "玄", 3, "丹道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_dandao", 500)),
+            t("liandao_qinhe", "炼道亲和", "玄", 3, "炼道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("dahen_liandao", 500)),
+            t("yindao_qinhe", "音道亲和", "玄", 3, "音道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_yindao", 500)),
+            t("huandao_qinhe", "幻道亲和", "玄", 3, "幻道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_huandao", 500)),
+            t("bianhuadao_qinhe", "变化道亲和", "玄", 3, "变化道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("daohen_bianhuadao", 500)),
+            t("zhendao_qinhe", "阵道亲和", "玄", 3, "阵道道痕 +500；该流派熟练度 +50（不直接增伤）", dao("dahen_zhendao", 500)),
+            t("wuying_bi", "无影壁", "玄", 2, "受击 6% 概率反弹 12% 伤害（同类只取最强；仅对玩家来源的攻击生效）", reflect(0.06, 0.12)),
             t("ruwei_dingshen", "入微定神", "玄", 2, "非护甲减伤 +8%", f(Op.REDUCTION, 0.08)),
             t("shanbu_suifeng", "闪步随风", "玄", 2, "闪避率 +6%", f(Op.DODGE, 0.06)),
             t("xueqi_rulin", "血气如林", "玄", 2, "生命上限 +20%", f(Op.HEALTH_MULT, 0.20)),
@@ -248,7 +243,7 @@ public final class TianfuTalents {
             t("tupo_tongtian", "突破通天", "地", 3, "本体突破失败概率降低 30%", f(Op.BREAKTHROUGH, 0.30)),
             t("dazuo_wangwo", "打坐忘我", "地", 3, "打坐时修炼进度 +40%", f(Op.XIULIAN, 0.40)),
             t("liangu_rushen", "炼蛊如神", "地", 3, "炼蛊进度 +40%", f(Op.LIANGU, 0.40)),
-            t("gudao_dup", "蛊道独步", "地", 3, "额外蛊冷却缩短（每 tick −0.25；熟练度降耗由本体另计）", f(Op.GU_CD, 0.25)),
+            t("gudao_dup", "蛊道独步", "地", 3, "蛊冷却时长 −20%（熟练度降耗由本体另计）", f(Op.GU_CD, 0.25)),
             t("shazhao_rufeng", "杀招如风", "地", 3, "额外杀招冷却缩短（每 tick −0.25；不等同真元降耗）", f(Op.SHAZHAO_CD, 0.25)),
             t("zhenyuan_ruquan", "真元如泉", "地", 3, "真元回复 +80%", f(Op.REGEN_ZY, 0.80)),
             t("niantou_ruyuan", "念头如渊", "地", 3, "念头回复 +60%", f(Op.REGEN_NT, 0.60)),
@@ -257,18 +252,17 @@ public final class TianfuTalents {
             t("baoji_rulie", "暴击如裂", "地", 3, "暴击率 +15%", f(Op.CRIT_CHANCE, 0.15)),
             t("baoshang_rufeng", "暴伤如锋", "地", 3, "暴击伤害 +80%", f(Op.CRIT_DAMAGE, 0.80)),
             t("xixue_rumo", "吸血入魔", "地", 3, "攻击吸血 +6%", f(Op.LEECH, 0.06)),
-            t("fanshang_ruyu", "反伤如玉", "地", 3, "受击 10% 概率反弹 20% 伤害", reflect(0.10, 0.20)),
+            t("fanshang_ruyu", "反伤如玉", "地", 3, "受击 10% 概率反弹 20% 伤害（同类只取最强；仅对玩家来源的攻击生效）", reflect(0.10, 0.20)),
             t("jianjia_ruyan", "坚甲如岩", "地", 3, "非护甲减伤 +15%", f(Op.REDUCTION, 0.15)),
             t("quansheng_ruhong", "全盛如洪", "地", 3, "满血时出伤 +18%", f(Op.OUT_FULL, 0.18)),
             t("canshen_rulang", "残身如狼", "地", 3, "残血（<30%）时出伤 +25%", f(Op.OUT_LOW, 0.25)),
             t("wanjun_lili", "万钧之力", "地", 3, "常驻力量 II", mob("strength", 1)),
             t("shengji_rumu", "生息如沐", "地", 3, "常驻生命恢复 II", mob("regeneration", 1)),
-            t("jiandao_dacheng", "剑道大成", "地", 3, "剑道道痕 +800；该流派熟练度效率 +80%，不直接增伤", dao("daohen_jiandao", 800)),
-            t("leidao_dacheng", "雷道大成", "地", 3, "雷道道痕 +800；该流派熟练度效率 +80%，不直接增伤", dao("daohen_leidao", 800)),
-            t("lidao_dacheng", "力道大成", "地", 3, "力道道痕 +800；该流派熟练度效率 +80%，不直接增伤", dao("daohen_lidao", 800)),
+            t("jiandao_dacheng", "剑道大成", "地", 4, "剑道道痕 +800；该流派熟练度 +80（不直接增伤）", dao("daohen_jiandao", 800)),
+            t("leidao_dacheng", "雷道大成", "地", 4, "雷道道痕 +800；该流派熟练度 +80（不直接增伤）", dao("daohen_leidao", 800)),
+            t("lidao_dacheng", "力道大成", "地", 4, "力道道痕 +800；该流派熟练度 +80（不直接增伤）", dao("daohen_lidao", 800)),
 
-            // ---- 天（5 点）：16 条（已筛除幸运 III 鸡肋条目） ----
-            t("wuxing_daocang", "五行道藏", "天", 5, "44 项非汇总道痕各 +300；对应熟练度效率各 +30%，不直接增伤", f(Op.DAOHEN_ALL, 300)),
+            // ---- 天（5 点）：15 条（已筛除幸运 III 鸡肋条目） ----
             t("qiqiao_linglong", "七窍玲珑", "天", 5, "念头容量 +50%、念头之道 +50%",
                     fld("niantou_rongliang", 0.50), fld("niantou_zhida", 0.50)),
             t("hunpo_rugui", "魂魄如鬼", "天", 5, "魂魄上限 +50%、承载极限 +50%（魂道伤害仍按本体分档）",
@@ -283,21 +277,18 @@ public final class TianfuTalents {
             t("baoji_rushen", "暴击如神", "天", 5, "暴击率 +25%、暴击伤害 +120%",
                     f(Op.CRIT_CHANCE, 0.25), f(Op.CRIT_DAMAGE, 1.20)),
             t("xixue_rushi", "吸血如饕", "天", 5, "攻击吸血 +10%", f(Op.LEECH, 0.10)),
-            t("fanshang_rushan", "反伤如山", "天", 5, "受击 20% 概率反弹 35% 伤害", reflect(0.20, 0.35)),
+            t("fanshang_rushan", "反伤如山", "天", 5, "受击 20% 概率反弹 35% 伤害（同类只取最强；仅对玩家来源的攻击生效）", reflect(0.20, 0.35)),
             t("jianjia_rushen", "坚甲如神", "天", 5, "非护甲减伤 +25%", f(Op.REDUCTION, 0.25)),
-            t("xiulian_rushen", "修炼如神", "天", 5, "修炼速度 +60%、本体突破失败概率降低 40%",
-                    f(Op.XIULIAN, 0.60), f(Op.BREAKTHROUGH, 0.40)),
-            t("liangu_bujie", "炼蛊不竭", "天", 5, "炼蛊进度 +60%、蛊冷却缩短（每 tick −0.3）",
-                    f(Op.LIANGU, 0.60), f(Op.GU_CD, 0.30)),
+            // 1.4.18 剥离：修炼类高阶天赋不再附带突破收益（任务书 五.3）。
+            // 数值落到候选表：修炼 I/II/III = +20/40/60%，修炼如神 = +80%。
+            t("xiulian_rushen", "修炼如神", "天", 5, "修炼速度 +80%",
+                    f(Op.XIULIAN, 0.80)),
+            // 1.4.18 剥离：炼蛊类不再附带蛊虫冷却收益（任务书 六.4）。
+            t("liangu_bujie", "炼蛊不竭", "天", 5, "炼蛊进度 +60%",
+                    f(Op.LIANGU, 0.60)),
             t("jixing_ruying", "疾行如影", "天", 5, "常驻迅捷 III", mob("speed", 2)),
 
-            // ---- 整合包附属联动（天 / 神）：引用附属注册的真实 buff ----
-            // 这些 id 都经 javap 核对过「确实注册」且类别为 BENEFICIAL，
-            // 常驻不会把 debuff 挂成永久（如兼修的 frost/frozen 是 HARMFUL，未选用）。
-            t("bingxue_daoti", "冰雪道体", "天", 5, "常驻「冰雪道增幅」（兼修附属）",
-                    mob("guzhenren_addon:ice_path_boost", 0)),
-            t("hundao_ronghe", "魂道融彻", "天", 5, "常驻「魂道增幅」（魂道附属）",
-                    mob("hundao_addon:hundao_zengfu", 0)),
+            // ---- 整合包附属联动（天）：引用附属注册的真实 buff ----
             t("qiyun_yizhi", "一掷乾坤", "天", 5, "常驻「一掷乾坤」、基础气运上限 +30%（零上限保持零）",
                     mob("yundao:yizhi_qiankun", 0), fld("qiyun_shangxian", 0.30)),
 
@@ -312,22 +303,24 @@ public final class TianfuTalents {
                     f(Op.ATTACK_MULT, 0.60), f(Op.ATTACK_SPEED_MULT, 0.25)),
             t("shen_jingang_buhuai", "神·金刚不坏", "神", 12, "击退抗性 +1、非护甲减伤 +35%",
                     f(Op.KNOCKBACK_FLAT, 1.0), f(Op.REDUCTION, 0.35)),
-            t("shen_xiulian_wuji", "神·修炼无极", "神", 12, "修炼速度 +150%、本体突破失败概率降低 60%",
-                    f(Op.XIULIAN, 1.50), f(Op.BREAKTHROUGH, 0.60)),
-            t("shen_liangu_tianshu", "神·炼蛊天术", "神", 12, "炼蛊进度 +90%、蛊冷却缩短（每 tick −0.5）",
-                    f(Op.LIANGU, 0.90), f(Op.GU_CD, 0.50)),
-            t("shen_wandao_guizong", "神·万道归宗", "神", 12, "44 项非汇总道痕各 +1500；对应熟练度效率各 +150%，不直接增伤", f(Op.DAOHEN_ALL, 1500)),
-            t("shen_liupai_jianji", "神·流派兼济", "神", 12,
-                    "常驻「冰雪道增幅」+「魂道增幅」+「一掷乾坤」，三者可叠加",
-                    mob("guzhenren_addon:ice_path_boost", 0),
-                    mob("hundao_addon:hundao_zengfu", 0),
-                    mob("yundao:yizhi_qiankun", 0)),
+            // 1.4.18 剥离：不再附带突破收益（任务书 五.3）
+            t("shen_xiulian_wuji", "神·修炼无极", "神", 12, "修炼速度 +150%",
+                    f(Op.XIULIAN, 1.50)),
+            // 1.4.18 剥离：不再附带蛊虫冷却收益（任务书 六.4）
+            t("shen_liangu_tianshu", "神·炼蛊天术", "神", 12, "炼蛊进度 +90%",
+                    f(Op.LIANGU, 0.90)),
+            t("shen_wandao_guizong", "神·主道归宗", "神", 8,
+                    "当前主修流派道痕 +1500、对应熟练度 +150；不增加其他流派道痕，不加修炼与突破",
+                    f(Op.DAOHEN_MAIN, 1500)),
 
             // ---- 极（16 点）：2 条 ----
             t("ji_wanshi_bumie", "极·万世不灭", "极", 16, "生命上限 +150%、每 5 秒回复 40% 生命、非护甲减伤 +40%",
                     f(Op.HEALTH_MULT, 1.50), f(Op.REGEN_HP_5S, 0.40), f(Op.REDUCTION, 0.40)),
-            t("ji_zhongdao_zhizun", "极·众道至尊", "极", 16, "44 项非汇总道痕各 +3000（效率各 +300%，不直接增伤）、修炼速度 +200%、本体突破失败概率降低 80%",
-                    f(Op.DAOHEN_ALL, 3000), f(Op.XIULIAN, 2.00), f(Op.BREAKTHROUGH, 0.80)),
+            // 1.4.18：从「44 路各 +3000」改为「只加当前主修 +3000」。
+            // 旧写法在本体互斥公式下是自我削弱（×0.0079），且还附带修炼 +200% 与突破 −80%。
+            t("ji_zhongdao_zhizun", "极·主道至尊", "极", 16,
+                    "当前主修流派道痕 +3000、对应熟练度 +300；不增加其他流派道痕，不加修炼与突破",
+                    f(Op.DAOHEN_MAIN, 3000)),
 
             // ---- 负（−2 点）：10 条 ----
             t("zhenyuan_kujie", "真元枯竭", "负", -2, "真元回复 −30%", f(Op.REGEN_ZY, -0.30)),
@@ -380,7 +373,7 @@ public final class TianfuTalents {
                     onHit("minecraft:blindness", 60, 0)),
 
             // ---- 地（3 点）----
-            t("malice_reflect", "镜影反照", "地", 3, "受击时 15% 概率把 30% 伤害以魔法形式反弹（恶意·反射）",
+            t("malice_reflect", "镜影反照", "地", 3, "受击时 15% 概率把 30% 伤害以魔法形式反弹（同类只取最强；仅对玩家来源的攻击生效）（恶意·反射）",
                     reflect(0.15, 0.30)),
             t("malice_counter", "反戈一击", "地", 3, "被击中后 3 秒内攻击伤害 +15%（恶意·反击）",
                     counter(0.15, 60)),
@@ -394,8 +387,6 @@ public final class TianfuTalents {
                     f(Op.REDUCTION_MAGIC, 0.15)),
             t("malice_adaptive", "随境应变", "天", 5, "每次受同类伤害再减伤 2%，同类最多叠 10 层（恶意·适应）",
                     adaptive(0.02, 10)),
-            t("malice_killer_aura", "杀意凛然", "天", 5, "每 3 秒对 4 格内敌对生物造成 5% 攻击力的魔法伤害（恶意·杀戮光环）",
-                    aura(4.0, 0.05)),
 
             // ---- 神（12 点）----
             t("malice_undying", "不死之身", "神", 12, "受到致命伤害时免死并回复 50% 生命，冷却 300 秒（恶意·不死）",
@@ -536,9 +527,9 @@ public final class TianfuTalents {
                 if (fx.op() == Op.FIELD_ADD || fx.op() == Op.FIELD_MULT) {
                     try {
                         if (PlayerVariables.class.getField(fx.arg()).getType() != double.class)
-                            throw new IllegalStateException("9.8 字段类型不匹配: " + fx.arg());
+                            throw new IllegalStateException("本体字段类型不匹配: " + fx.arg());
                     } catch (NoSuchFieldException failure) {
-                        throw new IllegalStateException("9.8 天赋字段缺失: " + talent.id() + "/" + fx.arg(), failure);
+                        throw new IllegalStateException("本体天赋字段缺失: " + talent.id() + "/" + fx.arg(), failure);
                     }
                 }
                 if (fx.op() == Op.MOB_EFFECT && modLoadedFor(fx.arg()) && effectOf(fx.arg()) == null) {
@@ -618,13 +609,111 @@ public final class TianfuTalents {
                 }
             }
         }
+        // 生命上限的封顶不在这里做：池内条目（不灭金身 ×2.0 / 筋骨强健 ×1.1）由
+        // TianfuAttributes 单独合成，本方法只返回**扩展词条的裸连乘**。
+        // 真正的封顶在 TianfuAttributes 合成完所有来源之后（见 HEALTH_CAP）。
         return new Attrs(health, attack, speed, attackSpeed, jump, knockback, fall);
     }
 
+    /** 生命上限总倍数上限（1.4.18）。在 {@code TianfuAttributes} 里对所有来源合算后施加。 */
+    public static final double HEALTH_CAP = 4.0;
+
     // ------------------------------------------------------------------ 引擎：一次性本体字段
+
+    // ------------------------------------------------------------------ 字段上限（1.4.18）
+    /**
+     * 受上限约束的**本体字段**。
+     *
+     * <p>这些字段的效果是「乘算/加算累积在同一个本体字段」上的（例如 4 条魂魄上限天赋
+     * 依次 ×1.15 / ×1.15 / ×1.5 / ×2.0，连乘到 3.97×）。因此**不能写死一个绝对值**——
+     * 每个玩家的本体基值不同。正确做法是：结算前先记下**本体基值**，应用后再按
+     * 「基值 × mult」或「基值 + add」封顶。
+     *
+     * @param mult 相对基值的倍数上限；&lt;= 0 表示不设倍数上限
+     * @param add  相对基值的加值上限；&lt;= 0 表示不设加值上限
+     */
+    private record FieldCap(double mult, double add) { }
+
+    private static final Map<String, FieldCap> FIELD_CAPS = Map.of(
+            // 气运上限：连乘 1.12×1.18×1.40×1.30×1.80 ≈ 4.34× → 封顶 3.0×
+            "qiyun_shangxian", new FieldCap(3.0, 0.0),
+            // 魂魄上限 / 承载极限：连乘 ≈ 3.97× → 封顶 3.0×
+            "zuida_hunpo", new FieldCap(3.0, 0.0),
+            "hunpochengzaijixian", new FieldCap(3.0, 0.0),
+            // 寿元：+80/+200/+50 = +330 → 封顶 +300（相对结算时的基值）
+            "shouyuan", new FieldCap(0.0, 300.0));
+
+    /** 结算前记录受上限约束字段的本体基值。 */
+    static Map<String, Double> snapshotCapped(PlayerVariables v) {
+        Map<String, Double> base = new LinkedHashMap<>();
+        for (String name : FIELD_CAPS.keySet()) {
+            base.put(name, readField(v, name));
+        }
+        return base;
+    }
+
+    /** 全部字段写入完成后统一按基值上限钳回一次，避免循环内提前截断导致顺序敏感。 */
+    static void clampAllCapped(PlayerVariables v, Map<String, Double> base) {
+        for (String name : FIELD_CAPS.keySet()) {
+            clampField(v, name, base);
+        }
+    }
+
+    private static double readField(PlayerVariables v, String name) {
+        try {
+            return PlayerVariables.class.getField(name).getDouble(v);
+        } catch (ReflectiveOperationException failure) {
+            return Double.NaN;
+        }
+    }
+
+    /** 该字段在给定基值下的上限；未设上限返回 {@link Double#MAX_VALUE}。抽出来是为了可单测。 */
+    static double limitFor(String name, double base) {
+        FieldCap cap = FIELD_CAPS.get(name);
+        if (cap == null) {
+            return Double.MAX_VALUE;
+        }
+        double limit = Double.MAX_VALUE;
+        // 基值为 0 时不做倍数封顶：0×任何倍数仍是 0，而本体「零上限保持零」的自然行为要保留
+        if (cap.mult() > 0.0 && base > 0.0) {
+            limit = Math.min(limit, base * cap.mult());
+        }
+        if (cap.add() > 0.0) {
+            limit = Math.min(limit, base + cap.add());
+        }
+        return limit;
+    }
+
+    /** 把刚被写入的字段钳回「基值 × mult」/「基值 + add」以内。 */
+    private static void clampField(PlayerVariables v, String name, Map<String, Double> base) {
+        if (!FIELD_CAPS.containsKey(name)) {
+            return;
+        }
+        Double boxed = base.get(name);
+        if (boxed == null || !Double.isFinite(boxed)) {
+            return;
+        }
+        double limit = limitFor(name, boxed);
+        if (limit == Double.MAX_VALUE) {
+            return;
+        }
+        double cur = readField(v, name);
+        if (Double.isFinite(cur) && cur > limit) {
+            try {
+                PlayerVariables.class.getField(name).setDouble(v, limit);
+            } catch (ReflectiveOperationException ignored) {
+                // 字段不存在：readField 已返回 NaN，走不到这里
+            }
+        }
+    }
 
     /** 购买时一次性写入本体 {@code PlayerVariables}（上限类 / 道痕类）。 */
     public static void applyOnce(ServerPlayer player, PlayerVariables v, Set<String> ids) {
+        applyOnce(player, v, ids, snapshotCapped(v));
+    }
+
+    /** 使用调用方预捕获的真实基值，在所有字段效果写完后统一按上限钳回。 */
+    static void applyOnce(ServerPlayer player, PlayerVariables v, Set<String> ids, Map<String, Double> capBase) {
         for (Talent talent : owned(ids)) {
             for (Fx fx : talent.fx()) {
                 switch (fx.op()) {
@@ -632,12 +721,14 @@ public final class TianfuTalents {
                     case FIELD_ADD -> add(v, fx.arg(), fx.a());
                     case DAOHEN -> addPaired(v, fx.arg(), fx.a());
                     case DAOHEN_ALL -> allDaohen(v, fx.a());
+                    case DAOHEN_MAIN -> applyMainDaohen(player, v, talent.id(), fx);
                     case APTITUDE_SET -> setAptitude(player, v, (int) Math.round(fx.a()));
                     default -> {
                     }
                 }
             }
         }
+        clampAllCapped(v, capBase);
     }
 
     /** Save the pre-selection aptitude once, then set the native aptitude field. */
@@ -719,6 +810,55 @@ public final class TianfuTalents {
     }
 
     /**
+     * 主修道痕（{@link Op#DAOHEN_MAIN}）：只往**当前主修流派**那一路写。
+     *
+     * <p>为什么不能沿用 {@link Op#DAOHEN_ALL}：本体互斥公式用
+     * {@code other = daohen_zong - own} 当「异道」分母，把道痕摊到 44 路会让
+     * {@code B} 暴涨、伤害被 {@code (B+1)} 除掉（+1500 摊 44 路实测 ≈ ×0.0156）。
+     * 只加主修时 {@code other = 0}，{@code A = own/1000} 线性增长，天赋才真正变成增益。
+     *
+     * <p><b>落点必须记录</b>：撤销时若按「当前主修」减，玩家换过主修就会从错的一路扣，
+     * 造成两个流派数值同时失真。所以购买/结算时把实际写入的流派键存进
+     * {@code PersistentData/tianfu/maindao:<talentId>}，撤销按记录减。
+     */
+    private static void applyMainDaohen(ServerPlayer player, PlayerVariables v, String talentId, Fx fx) {
+        String key = TianfuMainDao.of(player, v);
+        if (key.isEmpty()) {
+            // 购买门禁（TianfuApply.buyReason）已拦；这里兜底，绝不在主修未定时乱写一路。
+            return;
+        }
+        TianfuData.putString(player, mainDaohenKey(talentId), key);
+        addPaired(v, "daohen_" + key, fx.a());
+    }
+
+    private static void revokeMainDaohen(ServerPlayer player, PlayerVariables v, String talentId, Fx fx) {
+        String recordKey = mainDaohenKey(talentId);
+        String key = TianfuData.getString(player, recordKey, "");
+        if (!key.isEmpty()) {
+            subtractPaired(v, "daohen_" + key, fx.a());
+        }
+        TianfuData.removeKey(player, recordKey);
+    }
+
+    private static String mainDaohenKey(String talentId) {
+        return "maindao:" + talentId;
+    }
+
+    /** 该条目是否依赖「已选定主修」才能购买/生效（{@link Op#DAOHEN_MAIN}）。 */
+    public static boolean requiresMainDao(String id) {
+        Talent talent = byId(id);
+        if (talent == null) {
+            return false;
+        }
+        for (Fx fx : talent.fx()) {
+            if (fx.op() == Op.DAOHEN_MAIN) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * 道痕「成对写」：{@code daohen_*}/{@code dahen_*} 加值，对应流派权重加 1/10
      * （本体十绝体即 daohen 2000 / liupai 200）。
      *
@@ -758,8 +898,11 @@ public final class TianfuTalents {
     // ------------------------------------------------------------------ 引擎：周期类（tick）
 
     /** 真元回复加成（缩放本体 KE1 实际产生的正向回复增量）。 */
+    /** 真元回复加成上限（1.4.18）：当前可达最大值为 +265%，封顶 3.0 作护栏。 */
+    public static final double REGEN_ZY_CAP = 3.0;
+
     public static double regenZy(Set<String> ids) {
-        return sum(ids, Op.REGEN_ZY);
+        return Math.min(REGEN_ZY_CAP, sum(ids, Op.REGEN_ZY));
     }
 
     /** 念头回复加成。 */
@@ -957,50 +1100,40 @@ public final class TianfuTalents {
 
     // ------------------------------------------------------------------ 引擎：常驻药水效果
 
-    /** 常驻效果维护：缺失或即将到期时补一次无限时长（隐藏粒子）。 */
+    /** 常驻效果维护：缺失或等级偏低时补回无限时长；不把高阶限时药水/蛊虫 buff 永久固化。 */
     public static void maintainEffects(ServerPlayer player, Set<String> ids) {
+        Map<String, Integer> desired = new java.util.LinkedHashMap<>();
         for (Talent talent : owned(ids)) {
             for (Fx fx : talent.fx()) {
-                if (fx.op() != Op.MOB_EFFECT) {
+                if (fx.op() != Op.MOB_EFFECT || fx.arg() == null) {
                     continue;
                 }
-                Holder<MobEffect> effect = effectOf(fx.arg());
-                if (effect == null) {
+                int amp = (int) Math.round(fx.a());
+                desired.merge(fx.arg(), amp, Math::max);
+            }
+        }
+        for (var entry : desired.entrySet()) {
+            Holder<MobEffect> effect = effectOf(entry.getKey());
+            if (effect == null) {
+                continue;
+            }
+            int targetAmp = entry.getValue();
+            MobEffectInstance existing = player.getEffect(effect);
+            if (existing != null) {
+                if (existing.getAmplifier() > targetAmp) {
+                    // 玩家身上已有更高阶限时或外部 buff：不覆盖降级，也绝不把高阶限时 buff 改成永久无限。
                     continue;
                 }
-                MobEffectInstance existing = player.getEffect(effect);
-                // 无限时长的 duration 是 -1，直接写 < 600 会恒真 → 每 tick 重复 addEffect。
-                // 判定基准取「上次实际授予的等级」而非 fx.a()：授予时可能因玩家原有更高等级
-                // 而抬高，用 fx.a() 比会永远判为不足 → 每 tick 重挂 + 每 tick 写一次数据。
-                int grantedAmp = (int) TianfuData.getDouble(player, AMP_KEY + fx.arg(), fx.a());
-                boolean inPlace = existing != null
-                        && existing.getDuration() == -1
-                        && existing.getAmplifier() == grantedAmp;
-                if (!inPlace) {
-                    // 玩家身上若已有更高等级的限时版本（自己吃蛊 / 喝药），
-                    // 保留其等级再转常驻，避免「买天赋反而把自己 buff 降级」。
-                    int amp = Math.max(grantedAmp,
-                            existing == null ? 0 : existing.getAmplifier());
-                    player.addEffect(new MobEffectInstance(effect, -1, amp, true, false));
-                    // 记下「本模组实际授予的等级」，撤销时据此精确比对：
-                    // 既不误删玩家自己 /effect 给的无限 buff，也不会因等级抬高而残留。
-                    if (amp != grantedAmp) {
-                        TianfuData.putDouble(player, AMP_KEY + fx.arg(), amp);
-                    }
+                if (existing.getAmplifier() == targetAmp && existing.getDuration() == -1) {
+                    continue;
                 }
             }
+            player.addEffect(new MobEffectInstance(effect, -1, targetAmp, true, false));
         }
     }
 
     /**
      * 撤销词条时回收本模组授予的常驻药水。
-     *
-     * <p>只移除「无限时长<b>且等级与本表一致</b>」的那份：
-     * <ul>
-     *   <li>限时药水（玩家自己吃蛊 / 喝药）不动；</li>
-     *   <li>{@code /effect give @s speed infinite} 这类无限时长但等级不同的也不动；</li>
-     *   <li>其它仍生效词条需要保留的同名效果不动（先收集 keep 集合）。</li>
-     * </ul>
      */
     public static void revokeEffects(ServerPlayer player, Set<String> remainingIds) {
         Set<String> keep = new java.util.HashSet<>();
@@ -1022,14 +1155,13 @@ public final class TianfuTalents {
                     continue;
                 }
                 MobEffectInstance existing = player.getEffect(effect);
-                // 比对「授予时记录下来的等级」，而不是词条表里的 fx.a()：
-                // 若玩家原本带着更高等级的限时 buff，本模组会抬等级转常驻，
-                // 用 fx.a() 比对就会删不掉，导致撤销天赋后 buff 永久残留。
-                double granted = TianfuData.getDouble(player, AMP_KEY + fx.arg(), fx.a());
+                double legacyGranted = TianfuData.getDouble(player, AMP_KEY + fx.arg(), -1.0);
                 if (existing != null && existing.getDuration() == -1
-                        && existing.getAmplifier() == (int) granted) {
+                        && (existing.getAmplifier() == (int) Math.round(fx.a())
+                                || existing.getAmplifier() == (int) legacyGranted)) {
                     player.removeEffect(effect);
                 }
+                TianfuData.removeKey(player, AMP_KEY + fx.arg());
             }
         }
     }
@@ -1109,7 +1241,7 @@ public final class TianfuTalents {
     /** A settlement must fail and roll back if a promised native field cannot be written. */
     private static void add(PlayerVariables v, String field, double delta) {
         if (delta != 0.0 && !tryAdd(v, field, delta))
-            throw new IllegalStateException("本体 9.8 字段无法写入: " + field);
+            throw new IllegalStateException("本体字段无法写入: " + field);
     }
 
     /** @return 是否写入成功（字段不存在返回 false，供「大小写两种写法」回退用） */
@@ -1140,7 +1272,7 @@ public final class TianfuTalents {
             Field f = PlayerVariables.class.getField(field);
             f.setDouble(v, f.getDouble(v) * factor);
         } catch (ReflectiveOperationException failure) {
-            throw new IllegalStateException("本体 9.8 字段无法修改: " + field, failure);
+            throw new IllegalStateException("本体字段无法修改: " + field, failure);
         }
     }
 
@@ -1155,6 +1287,7 @@ public final class TianfuTalents {
                     case FIELD_ADD -> subtract(v, fx.arg(), fx.a());
                     case DAOHEN -> subtractPaired(v, fx.arg(), fx.a());
                     case DAOHEN_ALL -> allDaohen(v, -fx.a());
+                    case DAOHEN_MAIN -> revokeMainDaohen(player, v, talent.id(), fx);
                     case APTITUDE_SET -> restoreAptitude(player, v);
                     default -> {
                     }
@@ -1168,6 +1301,9 @@ public final class TianfuTalents {
 
     private static void divide(PlayerVariables v, String field, double divisor) {
         if (divisor == 1.0) {
+            return;
+        }
+        if (!Double.isFinite(divisor) || Math.abs(divisor) < 1e-6) {
             return;
         }
         try {

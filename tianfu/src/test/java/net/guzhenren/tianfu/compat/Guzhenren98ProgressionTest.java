@@ -49,18 +49,40 @@ public final class Guzhenren98ProgressionTest {
         // Rank 2 / human qi 100 / yuan cap 800 / luck 10 has native chance 71%.
         double chance = Guzhenren98Progression.nativeBreakthroughChance(2, 100, 800, 10, false);
         equal(.71, chance, "native regular destiny probability fixture");
-        equal(.76, Guzhenren98Progression.nativeBreakthroughChance(2, 100, 800, 10, true), "destiny5 doubles human qi contribution only");
-        equal(.797, Guzhenren98Progression.breakthroughChance(chance, .3), "-30% failure risk changes 29% failure to20.3%");
-        equal(.565, Guzhenren98Progression.breakthroughChance(chance, -.5), "+50% failure risk changes29% to43.5%");
+        // 命格 5 的人气系数**随本体版本变**：9.8 = 1.0E-3，10.4/10.20 = 7.5E-4。
+        // 代码已改为从本体 class 字节探测，所以期望值必须按**探测到的系数**算，
+        // 不能写死某个版本的数字（否则换个本体就红）。
+        double k5 = Guzhenren98Progression.destinyFiveHumanQiCoefficient();
+        System.out.println("  [探测] 命格5 人气系数 = " + k5
+                + "（9.8 应 0.001，10.x 应 7.5E-4）");
+        check(k5 == 0.001 || k5 == 0.00075, "命格5 系数只能是 1.0E-3（9.8）或 7.5E-4（10.x），实测=" + k5);
+        double destiny5 = 1.0 - 2 * 0.1 + 100 * k5 - 2 * 2 * 0.1 + 800 * 0.0002 + 10 * 0.01;
+        equal(destiny5, Guzhenren98Progression.nativeBreakthroughChance(2, 100, 800, 10, true),
+                "destiny5 人气贡献按探测到的系数计算（实测 k=" + k5 + "）");
+        // 1.4.18 口径改为「加性 + 95% 封顶」，不再按失败率乘算：
+        // 旧口径 .71 with .3 -> 1-(1-.71)(1-.3) = .797；新口径 .71+.3 -> 封顶 .95。
+        equal(.81, Guzhenren98Progression.breakthroughChance(chance, .1),
+                "additive: 71% + 10 points = 81%");
+        equal(.95, Guzhenren98Progression.breakthroughChance(chance, .3),
+                "talent-boosted chance is capped at 95%, never 100%");
+        equal(.21, Guzhenren98Progression.breakthroughChance(chance, -.5),
+                "negative reduction still subtracts additively");
         int successful = 0;
         for (int i = 0; i < 10000; i++) {
             double roll = (i + .5) / 10000;
-            if (Guzhenren98Progression.breakthroughRoll(roll, chance, .3) < chance) successful++;
-            check(Double.doubleToLongBits(roll) == Double.doubleToLongBits(Guzhenren98Progression.breakthroughRoll(roll, chance, 0)), "no talent preserves native random roll bit for bit");
+            if (Guzhenren98Progression.breakthroughRoll(roll, chance, .1) < chance) successful++;
         }
-        check(successful == 7970, "native strict comparison yields requested risk distribution");
-        equal(0, Guzhenren98Progression.breakthroughChance(.1, -4), "failure penalties clamp probability, not arbitrary talent limits");
-        equal(1, Guzhenren98Progression.breakthroughChance(.1, 2), "reductions beyond100% cannot exceed certainty");
+        check(successful == 8100, "native strict comparison yields requested risk distribution (81%)");
+        check(Double.doubleToLongBits(Guzhenren98Progression.breakthroughRoll(.4242, chance, 0))
+                        == Double.doubleToLongBits(.4242),
+                "no talent preserves native random roll bit for bit");
+        // P<=0（本体四转常态 -0.74）时天赋完全不生效：不得把「必失败」撬成「有 r 的概率」。
+        equal(0, Guzhenren98Progression.breakthroughChance(-.74, .5),
+                "talent never opens a native-impossible breakthrough");
+        equal(1, Guzhenren98Progression.breakthroughChance(1.06, .5),
+                "native already-certain breakthrough stays certain");
+        equal(0, Guzhenren98Progression.breakthroughChance(.1, -4), "failure penalties clamp at zero");
+        equal(.95, Guzhenren98Progression.breakthroughChance(.1, 2), "talents cannot exceed the 95% cap");
 
         check(Guzhenren98Progression.itemCooldownTicks(100, .25) == 80, "-.25 extra cooldown tick units yield80 real ticks");
         check(Guzhenren98Progression.itemCooldownTicks(100, -.1) == 112, "+.10 extra remainingtick units yield112 real ticks");

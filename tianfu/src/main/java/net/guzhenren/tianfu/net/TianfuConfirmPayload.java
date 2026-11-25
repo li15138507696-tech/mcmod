@@ -43,7 +43,7 @@ public record TianfuConfirmPayload() implements CustomPacketPayload {
                 return;
             }
             if (!net.guzhenren.tianfu.TianfuOpening.hasOpenedQiao(player)) {
-                player.displayClientMessage(Component.literal("需以希望蛊开窍后才能最终确认"), true);
+                player.displayClientMessage(Component.literal("需以希望蛊开窍后才能最终确认"), false);
                 return;
             }
             net.guzhenren.tianfu.v2.TianfuV2Store.migrate(player);
@@ -68,7 +68,8 @@ public record TianfuConfirmPayload() implements CustomPacketPayload {
                     case LOCKED -> "本世已锁定";
                     default -> "存在无法安全兑现的选择，未锁定，请检查已购项目";
                 };
-                player.displayClientMessage(Component.literal("无法最终确认：" + reason), true);
+                TianfuMod.LOGGER.warn("[天命] 最终确认被拒绝：{}（{}）", rejection, reason);
+                player.displayClientMessage(Component.literal("无法最终确认：" + reason), false);
             }
             net.guzhenren.tianfu.TianfuNet.sendAll(player);
         });    }

@@ -7,7 +7,10 @@ import java.util.Set;
 
 /** 无 Minecraft 依赖的数据边界；集合由构造方提供不可变副本，禁止原地修改。 */
 public final class TianfuSelection {
-    public static final int SCHEMA = 2;
+    /**
+     * 存档结构版本。
+     */
+    public static final int SCHEMA = 3;
     public static final int NEGATIVE_CAP = 24;
     private TianfuSelection() { }
 
@@ -30,7 +33,11 @@ public final class TianfuSelection {
                            int negativeGrant, Set<String> originEffectKeys) { }
     /** 业务拒绝不抛异常；不认识的 ID、锁定、预算、补点限额均返回失败。 */
     public enum Rejection { NONE, UNKNOWN_ID, LOCKED, NOT_OPENED, NO_DIFFICULTY, INSUFFICIENT_POINTS,
-        NEGATIVE_CAP, CONFLICT, STALE_REVISION, UNVERIFIED_EFFECT, UNSAFE_LIFESPAN, LEGACY_PRICE_UNKNOWN }
+        NEGATIVE_CAP, CONFLICT, STALE_REVISION, UNVERIFIED_EFFECT, UNSAFE_LIFESPAN, LEGACY_PRICE_UNKNOWN,
+        /** 该条目要求已选定主修流派（{@code Op.DAOHEN_MAIN}），当前主修未定或并列。 */
+        NO_MAIN_DAO,
+        /** 该条目已下架：保留 ID 供旧存档识别，但不再可购买（旧记录已按原价退款）。 */
+        RETIRED }
     /** ok=false 时 points/revision/购买记录/本体字段必须完全不变。 */
     public record Result(boolean ok, Rejection reason, Snapshot snapshot) { }
     /** 事务拟稿；只交给 Store 提交，预览阶段不触碰 PlayerVariables。 */

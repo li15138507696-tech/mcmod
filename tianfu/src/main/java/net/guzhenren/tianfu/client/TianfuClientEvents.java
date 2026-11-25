@@ -41,6 +41,10 @@ public final class TianfuClientEvents {
     /** A revision belongs to one client player lifecycle, not to every save ever opened. */
     private static void clearSelectionView() {
         stateWaitTicks = 0;
+        vfxPlaying = -1;
+        vfxTicks = 0;
+        net.guzhenren.tianfu.net.TianfuVfxPayload.consume();
+        net.guzhenren.tianfu.client.vfx.TianfuVfxBridge.pulse(0.0f, 0.0f);
         TianfuV2StatePayload.clear();
         Minecraft minecraft = Minecraft.getInstance();
         if (minecraft.screen instanceof TianfuViewScreen) {
