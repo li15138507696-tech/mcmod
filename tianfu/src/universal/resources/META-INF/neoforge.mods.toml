@@ -1,0 +1,25 @@
+modLoader = "javafml"
+loaderVersion = "[1,)"
+license = "All Rights Reserved"
+[[mods]]
+modId = "tianfu"
+version = "1.4.20-universal"
+displayName = "蛊真人天命通用版"
+description = '''独立天赋与属性系统。使用 /tianfu open 查看可选天赋。旧版命格数据保留，深度本体联动未启用。'''
+[[dependencies.tianfu]]
+modId = "neoforge"
+type = "required"
+versionRange = "[21.1.232,)"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.tianfu]]
+modId = "minecraft"
+type = "required"
+versionRange = "[1.21.1]"
+ordering = "NONE"
+side = "BOTH"
+[[dependencies.tianfu]]
+modId = "guzhenren"
+type = "optional"
+ordering = "NONE"
+side = "BOTH"
