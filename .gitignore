@@ -27,6 +27,7 @@ libs/
 _ref/knowledge-base.txt
 _ref/player-variables-fields.txt
 _ref/talent-inventory.txt
+docs/audit-1.4.18/_raw_*.txt
 
 # ===== 本地环境 =====
 .gradle/

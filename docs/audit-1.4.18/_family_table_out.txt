@@ -1,0 +1,156 @@
+﻿====================================================================================================
+A. 现有互斥族（TianfuMindTable.LEVELS）
+====================================================================================================
+  xiulian    3 条: v2_mind_xiulian_1(T1), v2_mind_xiulian_2(T2), v2_mind_xiulian_3(T3)
+  capacity   3 条: v2_mind_capacity_1(T1), v2_mind_capacity_2(T2), v2_mind_capacity_3(T3)
+  recovery   2 条: v2_mind_recovery_1(T1), v2_mind_recovery_2(T2)
+  liangu     2 条: v2_mind_liangu_1(T1), v2_mind_liangu_2(T2)
+  cooldown   2 条: v2_mind_cooldown_1(T1), v2_mind_cooldown_2(T2)
+  合计 12 条 / 5 族
+
+====================================================================================================
+B. 建议族表（校验后）
+====================================================================================================
+
+[TIER] xiulian  —  9 条
+    理由: 修炼速度。现有族只有 3 条，9 条旧条目在族外可无限叠加（实测可到 +530%）
+    成员: v2_mind_xiulian_1(+2点), v2_mind_xiulian_2(+3点), v2_mind_xiulian_3(+5点), dazuo_wangwo(+3点), kuxiu_buchuo(+2点), suiyue_chendian(+2点), suhui(+5点), xiulian_rushen(+5点), shen_xiulian_wuji(+12点)
+
+[TIER] tupo  —  2 条
+    理由: 突破成功率。P1-1 从 xiulian_rushen/shen_xiulian_wuji/ji_zhongdao_zhizun 剥离后只剩这两条
+    成员: houji_bofa(+2点), tupo_tongtian(+3点)
+
+[TIER] liangu  —  5 条
+    理由: 炼蛊进度。现有族只有 2 条，另 3 条在族外
+    成员: v2_mind_liangu_1(+2点), v2_mind_liangu_2(+3点), liangu_rushen(+3点), liangu_bujie(+5点), shen_liangu_tianshu(+12点)
+
+[TIER] cooldown  —  4 条
+    理由: 蛊虫冷却。P1 从 liangu_bujie/shen_liangu_tianshu 剥离 GU_CD 后并入此族
+    成员: v2_mind_cooldown_1(+2点), v2_mind_cooldown_2(+3点), gudao_dup(+3点), v2_gu_cd_ningse(-2点)
+
+[TIER] capacity  —  6 条
+    理由: 念头容量
+    成员: v2_mind_capacity_1(+2点), v2_mind_capacity_2(+3点), v2_mind_capacity_3(+5点), niantou_kuozhan(+2点), qiqiao_linglong(+5点), shen_hunxi_zhuzai(+12点)
+
+[TIER] recovery  —  5 条
+    理由: 念头恢复
+    成员: v2_mind_recovery_1(+2点), v2_mind_recovery_2(+3点), niantou_zisheng(+1点), niantou_ruyuan(+3点), niantou_bujie(+5点)
+
+[TIER] jingli  —  2 条
+    理由: 精力上限
+    成员: jingli_shengheng(+2点), jingli_ruhai(+5点)
+
+[TIER] daohen:jiandao  —  2 条
+    理由: 剑道：+200 → +800 二选一
+    成员: jiandao_qinhe(+1点), jiandao_dacheng(+3点)
+
+[TIER] daohen:leidao  —  2 条
+    理由: 雷道：+200 → +800 二选一
+    成员: leidao_qinhe(+1点), leidao_dacheng(+3点)
+
+[TIER] daohen:lidao  —  2 条
+    理由: 力道：+200 → +800 二选一
+    成员: lidao_qinhe(+1点), lidao_dacheng(+3点)
+
+[TIER] daohen_main  —  2 条
+    理由: 主修强化两极：+1500(8点) → +3000(16点)
+    成员: shen_wandao_guizong(+12点), ji_zhongdao_zhizun(+16点)
+
+[EXCLUSIVE] main_vs_single  —  20 条
+    理由: ★ 任务书要求『两个主修强化天赋与所有普通主修道痕天赋互斥』—— 15 主修流的 19 条道痕天赋
+    成员: shen_wandao_guizong(+12点), ji_zhongdao_zhizun(+16点), jiandao_qinhe(+1点), jiandao_dacheng(+3点), jindao_qinhe(+1点), shuidao_qinhe(+1点), xuedao_qinhe(+1点), lidao_qinhe(+1点), lidao_dacheng(+3点), mudao_qinhe(+1点), yudao_qinhe(+1点), fengdao_qinhe(+1点), bingdao_qinhe(+2点), jindao2_jinjie(+2点), hundao_qinhe(+1点), leidao_qinhe(+1点), leidao_dacheng(+3点), yandao_qinhe(+1点), lvdao_qinhe(+1点), tudao_qinhe(+1点)
+
+[EXCLUSIVE] liupai_bundle  —  4 条
+    理由: 神·流派兼济 12 点打包了单卖 15 点的三条，且可叠加 → 套利
+    成员: shen_liupai_jianji(+12点), bingxue_daoti(+5点), hundao_ronghe(+5点), qiyun_yizhi(+5点)
+
+[EXCLUSIVE] neg_health  —  2 条
+    理由: 生命上限负面
+    成员: v2_routi_canque(-5点), routi_chanruo(-2点)
+
+[EXCLUSIVE] neg_zhenyuan  —  2 条
+    理由: 真元恢复负面
+    成员: v2_zhenyuan_kubai(-5点), zhenyuan_kujie(-2点)
+
+[EXCLUSIVE] neg_xiulian  —  2 条
+    理由: 修炼+突破负面
+    成员: v2_xinzhi_yousun(-5点), xiuxing_chizhi(-2点)
+
+[EXCLUSIVE] neg_shouyuan  —  2 条
+    理由: 寿元负面
+    成员: v2_shouyuan_kuwei(-5点), shouyuan_duancu(-2点)
+
+[EXCLUSIVE] neg_qiyun  —  3 条
+    理由: 气运负面（含归零）
+    成员: v2_qiyun_duanjue(-5点), qiyun_xibo(-2点), v2_luck_forfeit(-8点)
+
+[EXCLUSIVE] neg_niantou  —  2 条
+    理由: 念头负面
+    成员: nianfu_xiayai(-2点), niantou_ganhe(-2点)
+
+[CAP] cap_reduction  —  7 条
+    理由: 非护甲减伤，硬上限 0.50
+    成员: tiepi_rougu(+1点), ruwei_dingshen(+2点), jianjia_ruyan(+3点), jianjia_rushen(+5点), shen_busi_bumie(+12点), shen_jingang_buhuai(+12点), ji_wanshi_bumie(+16点)
+
+[CAP] cap_dodge  —  2 条
+    理由: 闪避，硬上限 0.60
+    成员: shanbu_suifeng(+2点), shenfa_ruyan(+3点)
+
+[CAP] cap_crit_rate  —  3 条
+    理由: 暴击率，硬上限 0.50
+    成员: baoji_rulie(+3点), baoji_rushen(+5点), shen_tianji_suan(+12点)
+
+[CAP] cap_crit_dmg  —  3 条
+    理由: 暴击伤害
+    成员: baoji_rushen(+5点), jianbi_qingfeng(+2点), shen_tianji_suan(+12点)
+
+[CAP] cap_health  —  4 条
+    理由: 生命上限（连乘已达 6.6×）
+    成员: xueqi_rulin(+2点), shen_bumie_jinshen(+12点), ji_wanshi_bumie(+16点), jingu_qiangjian(+1点)
+
+[CAP] cap_qiyun  —  7 条
+    理由: 气运上限
+    成员: qiyun_weiying(+2点), qiyun_yingmen(+2点), qiyun_ruhong(+5点), qiyun_yizhi(+5点), shen_qiyun_zhizi(+12点), fuze_mianchang(+3点), qiyun_weiguang(+1点)
+
+[CAP] cap_shouyuan  —  3 条
+    理由: 寿元正向上限
+    成员: chuntian_yishou(+2点), shouyuan_ruhe(+5点), shouyuan_mianchang(+1点)
+
+[CAP] cap_zhenyuan_regen  —  3 条
+    理由: 真元恢复
+    成员: zhenyuan_huiliu(+2点), zhenyuan_ruquan(+3点), zhenyuan_bujie(+5点)
+
+[CAP] cap_hunsoul  —  4 条
+    理由: 魂魄上限/承载
+    成员: hunpo_lianxi(+2点), hunzai_kuanhou(+2点), hunpo_rugui(+5点), shen_hunxi_zhuzai(+12点)
+
+====================================================================================================
+C. 校验结果
+====================================================================================================
+  目录条目总数（可购）：187
+  被至少一个族覆盖：101
+  拼写错误 / 不存在的 id：0
+
+====================================================================================================
+D. 未纳入任何族的条目（设计上应保持自由组合）
+====================================================================================================
+  共 86 条：
+  andao_qinhe(+1) baoji_jingtong(+1) baoshang_rufeng(+3) bianhuadao_qinhe(+2) 
+  bingxuedao_qinhe(+1) bufen_zhiwu(+1) canshen_rulang(+3) dandao_qinhe(+2) daodao_qinhe(+2) 
+  dudao_qinhe(+1) fanshang_rushan(+5) fanshang_ruyu(+3) guangdao_qinhe(+2) gudao_qinhe(+1) 
+  huadao_qinhe(+1) huandao_qinhe(+2) huixue_rusheng(+5) hunli_shuairuo(-2) jixing_ruying(+5) 
+  liandao_qinhe(+2) lijin_ruquan(+2) malice_adaptive(+5) malice_blindness(+2) malice_counter(+3) 
+  malice_dementor(+5) malice_dispell(+5) malice_freezing(+2) malice_killer_aura(+5) 
+  malice_moonwalk(+1) malice_poison(+2) malice_reflect(+3) malice_slowness(+1) 
+  malice_undying(+12) malice_weakness(+2) malice_wither(+3) mengdao_qinhe(+1) 
+  niantou_ninglian(+2) nudao_qinhe(+1) qidao_qinhe(+1) quanru_jifeng(+2) quansheng_ruhong(+3) 
+  quanshi_piruan(-2) rendao_dacheng(+3) shazhao_rufeng(+3) shazhao_tiancheng(+3) 
+  shen_zhanshen_linshi(+12) shenfa_chidun(-2) shenfa_qingjie(+1) shengji_rumu(+3) 
+  shidao_qinhe(+2) shiyuan_zhixing(+3) songyue_jianli(+2) tiandao_daocang(+5) toudao_qinhe(+1) 
+  v2_apt_bing(+3) v2_apt_ding(+1) v2_apt_jia(+10) v2_apt_yi(+6) v2_aptitude_shackled(-8) 
+  v2_jingli_buji(-2) v2_lifespan_scar(-8) wanfa_jietong(+16) wanjun_lili(+3) wuxing_daocang(+5) 
+  wuying_bi(+2) xieshi_ziyu(+3) xindao_qinhe(+2) xingdao_qinhe(+2) xinshen_ruyuan(+2) 
+  xixue_rumo(+3) xixue_rushi(+5) xudao_qinhe(+1) yindao_qinhe(+2) yingdao_qinhe(+1) 
+  youdou_gaoshou(+2) youshou_nengkai(+1) yuedao_qinhe(+1) yundao2_jinjie(+2) yundao_qinhe(+2) 
+  zhanyi_angran(+1) zhaoqi_yinlu(+1) zhendao_qinhe(+2) zhenyuan_ninglian(+2) zhidao_qinhe(+1) 
+  zhoudao_qinhe(+1) zonghen_chubei(+5) 

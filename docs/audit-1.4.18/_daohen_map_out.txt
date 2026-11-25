@@ -1,0 +1,99 @@
+﻿====================================================================================================
+A. 字段盘点
+====================================================================================================
+daohen_*/dahen_* 字段总数      : 45  (含汇总 daohen_zong)
+44 项真实道痕字段              : 44
+liupai_* 字段数                : 46
+KE1Procedure 汇总求和项数      : 44  唯一: 44
+无 daohen 字段的 liupai 流派   : ['feixingdao', 'qingmeidao']
+主修候选 (TianfuMainDao.KEYS)  : 15 -> ['jiandao', 'jindao', 'shuidao', 'xuedao', 'lidao', 'mudao', 'yudao', 'fengdao', 'bingdao', 'jindao2', 'hundao', 'leidao', 'yandao', 'lvdao', 'tudao']
+特殊流派 = 44 - 15            : 29
+
+====================================================================================================
+B. 44 项道痕 x 天赋 映射表
+====================================================================================================
+#  本体字段                    流派            前缀       汇总?    主修?    天赋 id                   量      价   品质
+----------------------------------------------------------------------------------------------------
+1  daohen_andao            andao         daohen   Y      -      andao_qinhe             200    1   黄
+2  daohen_bianhuadao       bianhuadao    daohen   Y      -      bianhuadao_qinhe        500    2   玄
+3  daohen_bingdao          bingdao       daohen   Y      Y      bingdao_qinhe           500    2   玄
+4  daohen_bingxuedao       bingxuedao    daohen   Y      -      bingxuedao_qinhe        200    1   黄
+5  daohen_dandao           dandao        daohen   Y      -      dandao_qinhe            500    2   玄
+6  daohen_daodao           daodao        daohen   Y      -      daodao_qinhe            500    2   玄
+7  daohen_dudao            dudao         daohen   Y      -      dudao_qinhe             200    1   黄
+8  daohen_fengdao          fengdao       daohen   Y      Y      fengdao_qinhe           200    1   黄
+9  daohen_guangdao         guangdao      daohen   Y      -      guangdao_qinhe          500    2   玄
+10 daohen_gudao            gudao         daohen   Y      -      gudao_qinhe             200    1   黄
+11 daohen_huadao           huadao        daohen   Y      -      huadao_qinhe            200    1   黄
+12 daohen_huandao          huandao       daohen   Y      -      huandao_qinhe           500    2   玄
+13 daohen_hundao           hundao        daohen   Y      Y      hundao_qinhe            200    1   黄
+14 daohen_jiandao          jiandao       daohen   Y      Y      jiandao_qinhe           200    1   黄
+14 daohen_jiandao          jiandao       daohen   Y      Y      jiandao_dacheng         800    3   地  ^同级第二档
+15 daohen_jindao           jindao        daohen   Y      Y      jindao_qinhe            200    1   黄
+16 daohen_jindao2          jindao2       daohen   Y      Y      jindao2_jinjie          500    2   玄
+17 daohen_leidao           leidao        daohen   Y      Y      leidao_qinhe            200    1   黄
+17 daohen_leidao           leidao        daohen   Y      Y      leidao_dacheng          800    3   地  ^同级第二档
+18 dahen_liandao           liandao       dahen    Y      -      liandao_qinhe           500    2   玄
+19 daohen_lidao            lidao         daohen   Y      Y      lidao_qinhe             200    1   黄
+19 daohen_lidao            lidao         daohen   Y      Y      lidao_dacheng           800    3   地  ^同级第二档
+20 daohen_lvdao            lvdao         daohen   Y      Y      lvdao_qinhe             200    1   黄
+21 daohen_mengdao          mengdao       daohen   Y      -      mengdao_qinhe           200    1   黄
+22 daohen_mudao            mudao         daohen   Y      Y      mudao_qinhe             200    1   黄
+23 dahen_nudao             nudao         dahen    Y      -      nudao_qinhe             200    1   黄
+24 dahen_qidao             qidao         dahen    Y      -      qidao_qinhe             200    1   黄
+25 dahen_rendao            rendao        dahen    Y      -      rendao_dacheng          800    3   地
+26 daohen_shidao           shidao        daohen   Y      -      shidao_qinhe            500    2   玄
+27 daohen_shuidao          shuidao       daohen   Y      Y      shuidao_qinhe           200    1   黄
+28 dahen_tiandao           tiandao       dahen    Y      -      tiandao_daocang         1200   5   天
+29 daohen_toudao           toudao        daohen   Y      -      toudao_qinhe            200    1   黄
+30 daohen_tudao            tudao         daohen   Y      Y      tudao_qinhe             200    1   黄
+31 daohen_xindao           xindao        daohen   Y      -      xindao_qinhe            500    2   玄
+32 dahen_xingdao           xingdao       dahen    Y      -      xingdao_qinhe           500    2   玄
+33 daohen_xudao            xudao         daohen   Y      -      xudao_qinhe             200    1   黄
+34 daohen_xuedao           xuedao        daohen   Y      Y      xuedao_qinhe            200    1   黄
+35 daohen_yandao           yandao        daohen   Y      Y      yandao_qinhe            200    1   黄
+36 daohen_yindao           yindao        daohen   Y      -      yindao_qinhe            500    2   玄
+37 daohen_yingdao          yingdao       daohen   Y      -      yingdao_qinhe           200    1   黄
+38 daohen_yudao            yudao         daohen   Y      Y      yudao_qinhe             200    1   黄
+39 daohen_yuedao           yuedao        daohen   Y      -      yuedao_qinhe            200    1   黄
+40 daohen_yundao           yundao        daohen   Y      -      yundao_qinhe            500    2   玄
+41 daohen_yundao2          yundao2       daohen   Y      -      yundao2_jinjie          500    2   玄
+42 dahen_zhendao           zhendao       dahen    Y      -      zhendao_qinhe           500    2   玄
+43 dahen_zhidao            zhidao        dahen    Y      -      zhidao_qinhe            200    1   黄
+44 dahen_zhoudao           zhoudao       dahen    Y      -      zhoudao_qinhe           200    1   黄
+
+====================================================================================================
+C. 覆盖性与异常
+====================================================================================================
+无任何天赋的字段            : 无
+有天赋的字段数              : 44/44
+未纳入 daohen_zong 汇总的字段: 无
+一字段多档位的流派          : ['daohen_jiandao', 'daohen_leidao', 'daohen_lidao']
+天赋条数(dao 调用)          : 47
+
+====================================================================================================
+D. 价格分布（现价 vs 任务书规定梯度）
+====================================================================================================
++200     现价 1   任务书 1    OK           条数 27  例: yudao_qinhe
++500     现价 2   任务书 3    不符(应为3)      条数 15  例: shidao_qinhe
++800     现价 3   任务书 4    不符(应为4)      条数 4   例: rendao_dacheng
++1200    现价 5   任务书 6    不符(应为6)      条数 1   例: tiandao_daocang
+
+====================================================================================================
+E. 15 项主修流派的天赋覆盖
+====================================================================================================
+jiandao      daohen_jiandao         天赋: jiandao_qinhe(200/1点), jiandao_dacheng(800/3点)
+jindao       daohen_jindao          天赋: jindao_qinhe(200/1点)
+shuidao      daohen_shuidao         天赋: shuidao_qinhe(200/1点)
+xuedao       daohen_xuedao          天赋: xuedao_qinhe(200/1点)
+lidao        daohen_lidao           天赋: lidao_qinhe(200/1点), lidao_dacheng(800/3点)
+mudao        daohen_mudao           天赋: mudao_qinhe(200/1点)
+yudao        daohen_yudao           天赋: yudao_qinhe(200/1点)
+fengdao      daohen_fengdao         天赋: fengdao_qinhe(200/1点)
+bingdao      daohen_bingdao         天赋: bingdao_qinhe(500/2点)
+jindao2      daohen_jindao2         天赋: jindao2_jinjie(500/2点)
+hundao       daohen_hundao          天赋: hundao_qinhe(200/1点)
+leidao       daohen_leidao          天赋: leidao_qinhe(200/1点), leidao_dacheng(800/3点)
+yandao       daohen_yandao          天赋: yandao_qinhe(200/1点)
+lvdao        daohen_lvdao           天赋: lvdao_qinhe(200/1点)
+tudao        daohen_tudao           天赋: tudao_qinhe(200/1点)
