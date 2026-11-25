@@ -2,11 +2,13 @@
   "required": true,
   "minVersion": "0.8",
   "package": "net.guzhenren.daotu.mixin",
+  "plugin": "net.guzhenren.daotu.mixin.DaotuMixinPlugin",
   "compatibilityLevel": "JAVA_21",
   "priority": 1100,
   "mixins": [
     "UikongqiaoquedingProcedureMixin",
-    "JingJieBaoCunProcedureMixin"
+    "JingJieBaoCunProcedureMixin",
+    "JingJieBaoCunV2ProcedureMixin"
   ],
   "injectors": {
     "defaultRequire": 0
